@@ -12,7 +12,7 @@ use url::Url;
 mod checksum;
 use checksum::{Checksum, ChecksumValidator};
 
-static CHANGELOGS: &[&str] = &[
+static CHECKSUM_FILES: &[&str] = &[
     "CHECKSUM.txt",
     "checksum.txt",
     "CHECKSUMS.txt",
@@ -101,7 +101,7 @@ async fn run() -> anyhow::Result<()> {
     log_step(SEARCH, "Looking for checksum files...");
 
     // Fetch the checksum files from the URL
-    let checksum_dl = CHANGELOGS.iter().map(|changelog| {
+    let checksum_dl = CHECKSUM_FILES.iter().map(|changelog| {
         let mut nurl = url.clone();
 
         // Swap the file name in the URL with the changelog name
