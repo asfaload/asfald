@@ -72,6 +72,10 @@ struct Cli {
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     output: Option<String>,
 
+    /// Specify additional changelogs or patterns to search for
+    #[arg(short = 'p', long = "pattern", value_name = "TEMPLATE")]
+    changelog_patterns: Vec<String>,
+
     /// The URL to download the file from
     url: Url,
 }
@@ -142,6 +146,7 @@ async fn run() -> anyhow::Result<()> {
     // Create a stream of checksum downloads
     let changelog_patterns = CHECKSUMS_FILES
         .iter()
+        .chain(args.changelog_patterns.iter())
         // It is safe to unwrap as the only possible error is catched by the validate_vars above
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
         .map(|path| {
