@@ -94,6 +94,7 @@ async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidato
 async fn main() {
     if let Err(e) = run().await {
         log_err(e.to_string().as_str());
+        std::process::exit(1);
     }
 }
 
