@@ -53,6 +53,10 @@ fn log_warn(msg: &str) {
     about = "Download a file from a URL and check its checksum"
 )]
 struct Cli {
+    /// Do not print any output
+    #[arg(short = 'q', long = "quiet")]
+    quiet: bool,
+
     /// Force download even if the checksum is invalid or not found
     #[arg(short = 'f', long = "force")]
     force: bool,
@@ -97,7 +101,13 @@ async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let url = args.url;
 
-    Logger::new().with_level(LevelFilter::Info).init().unwrap();
+    // Initialise the logger:
+    let log_level = if args.quiet {
+        LevelFilter::Off
+    } else {
+        LevelFilter::Info
+    };
+    Logger::new().with_level(log_level).init().unwrap();
 
     let mut url_path = url
         .path_segments()
