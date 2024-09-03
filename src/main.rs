@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use clap::Parser;
 use console::{style, Emoji};
 use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use once_cell::sync::Lazy;
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -12,15 +15,19 @@ use url::Url;
 mod checksum;
 use checksum::{Checksum, ChecksumValidator};
 
-static CHECKSUM_FILES: &[&str] = &[
-    "CHECKSUM.txt",
-    "checksum.txt",
-    "CHECKSUMS.txt",
-    "checksums.txt",
-    "SHASUMS256.txt",
-    "SHASUMS256",
-    // TODO add more patterns
-];
+static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
+    vec![
+        "${path}/CHECKSUM.txt".to_string(),
+        "${path}/checksum.txt".to_string(),
+        "${path}/CHECKSUMS.txt".to_string(),
+        "${path}/CHECKSUMS256.txt".to_string(),
+        "${path}/checksums.txt".to_string(),
+        "${path}/SHASUMS256.txt".to_string(),
+        "${path}/SHASUMS256".to_string(),
+        "${path}/${file}.sha256sum".to_string(),
+        // TODO add more patterns
+    ]
+});
 
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
@@ -93,28 +100,38 @@ async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let url = args.url;
 
-    let mut url_path = url
+    let url_path = url
         .path_segments()
         .map(|c| c.map(|s| s.to_owned()).collect::<Vec<_>>())
         .unwrap_or_else(std::vec::Vec::new);
 
     let file = url_path.last().context("No file found in URL")?.to_owned();
+    let path = url_path[..url_path.len() - 1].join("/");
 
     log_step(SEARCH, "Looking for checksum files...");
 
-    // Fetch the checksum files from the URL
-    let checksum_dl = CHECKSUM_FILES.iter().map(|changelog| {
-        let mut nurl = url.clone();
+    // Create a hashmap with the path and file to be used in the templates
+    let vars = HashMap::from([
+        ("path".to_string(), path),
+        ("file".to_string(), file.clone()),
+    ]);
+    // This shouldn't happen:
+    envsubst::validate_vars(&vars).context("unable to validate substitution variables")?;
 
-        // Swap the file name in the URL with the changelog name
-        url_path.pop();
-        url_path.push(changelog.to_string());
-        nurl.set_path(url_path.join("/").as_str());
+    // Create a stream of checksum downloads
+    let changelog_patterns = CHECKSUMS_FILES
+        .iter()
+        // It is safe to unwrap as the only possible error is catched by the validate_vars above
+        .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+        .map(|path| {
+            // Build the URL for the checksum file & create a future to fetch it
+            let mut nurl = url.clone();
+            nurl.set_path(&path);
+            Box::pin(fetch_checksum(nurl, &file))
+        });
 
-        Box::pin(fetch_checksum(nurl, &file))
-    });
-
-    let mut checksum = match select_ok(checksum_dl).await {
+    // Select the first checksum file that is found
+    let mut checksum = match select_ok(changelog_patterns).await {
         Ok((checksum, _)) => {
             log_step(FOUND, "Checksum file found !");
             Some(checksum)
