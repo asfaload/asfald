@@ -3,6 +3,7 @@ use clap::Parser;
 use console::{style, Emoji};
 use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use log::{error, info, warn, LevelFilter};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -11,6 +12,9 @@ use url::Url;
 
 mod checksum;
 use checksum::{Checksum, ChecksumValidator};
+
+mod logger;
+use logger::Logger;
 
 static CHECKSUM_FILES: &[&str] = &[
     "CHECKSUM.txt",
@@ -32,15 +36,15 @@ static INVALID: Emoji<'_, '_> = Emoji("❌", "");
 static ERROR: Emoji<'_, '_> = Emoji("🚨", "/!\\");
 
 fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
-    println!("{} {}", emoji, msg);
+    info!("{} {}", emoji, msg);
 }
 
 fn log_err(msg: &str) {
-    println!("{} {}", ERROR, style(msg).bold().red());
+    error!("{} {}", ERROR, style(msg).bold().red());
 }
 
 fn log_warn(msg: &str) {
-    println!("{} {}", WARN, style(msg).bold().yellow());
+    warn!("{} {}", WARN, style(msg).bold().yellow());
 }
 
 #[derive(Parser)]
@@ -92,6 +96,8 @@ async fn main() {
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let url = args.url;
+
+    Logger::new().with_level(LevelFilter::Info).init().unwrap();
 
     let mut url_path = url
         .path_segments()

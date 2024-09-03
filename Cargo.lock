@@ -83,6 +83,7 @@ dependencies = [
  "futures",
  "hex",
  "indicatif",
+ "log",
  "md-5",
  "reqwest",
  "sha1",
