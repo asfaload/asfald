@@ -17,8 +17,8 @@ static CHECKSUM_FILES: &[&str] = &[
     "checksum.txt",
     "CHECKSUMS.txt",
     "checksums.txt",
-    "SHASHUMS256.txt",
-    "SHASHUMS256",
+    "SHASUMS256.txt",
+    "SHASUMS256",
     // TODO add more patterns
 ];
 
