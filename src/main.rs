@@ -163,7 +163,11 @@ async fn run() -> anyhow::Result<()> {
     let file_size = response.content_length();
     let mut data = response.bytes_stream();
 
-    let pb = ProgressBar::new(file_size.unwrap_or(0));
+    let pb = if args.quiet {
+        ProgressBar::hidden()
+    } else {
+        ProgressBar::new(file_size.unwrap_or(0))
+    };
 
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta_precise})")
             .unwrap()
