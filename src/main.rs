@@ -28,7 +28,7 @@ static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
         "${path}/checksums.txt".to_string(),
         "${path}/SHASUMS256.txt".to_string(),
         "${path}/SHASUMS256".to_string(),
-        "${path}/${file}.sha256sum".to_string(),
+        "${fullpath}.sha256sum".to_string(),
         // TODO add more patterns
     ]
 });
@@ -137,6 +137,7 @@ async fn run() -> anyhow::Result<()> {
 
     // Create a hashmap with the path and file to be used in the templates
     let vars = HashMap::from([
+        ("fullpath".to_string(), url_path.join("/")),
         ("path".to_string(), path),
         ("file".to_string(), file.clone()),
     ]);
