@@ -17,6 +17,10 @@ use checksum::{Checksum, ChecksumValidator};
 
 static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
     vec![
+        // Define checksum file patterns here. Variables are availabe to define the patterns:
+        //   - ${{path}}: The target URL path, excluding the filename.
+        //   - ${{file}}: The filename of the target URL.
+        //   - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
         "${path}/CHECKSUM.txt".to_string(),
         "${path}/checksum.txt".to_string(),
         "${path}/CHECKSUMS.txt".to_string(),
@@ -38,6 +42,35 @@ static VALID: Emoji<'_, '_> = Emoji("✅", "");
 static INVALID: Emoji<'_, '_> = Emoji("❌", "");
 static ERROR: Emoji<'_, '_> = Emoji("🚨", "/!\\");
 
+static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
+    format!("
+{}
+
+The -p/--pattern <TEMPLATE> flag allows you to specify additional checksum file
+patterns to search for, beyond those that the app already looks for by default.
+You can repeat this option to search for multiple patterns.
+
+The <TEMPLATE> can either be a full URL path to a checksum file or a template
+using predefined variables. These variables are:
+
+ - ${{path}}: The target URL path, excluding the filename.
+ - ${{file}}: The filename of the target URL.
+ - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
+
+Searching for Checksums ending with .checksum:
+
+ $ asfd -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
+
+This will look for a possible checksum at the following URL:
+https://github.com/user/repo/releases/download/v0.0.1/mybinary.checksum
+
+Specifying a full checksum URL:
+
+ $ asfd -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
+
+", style("Examples:").bold().underlined())
+});
+
 fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
     println!("{} {}", emoji, msg);
 }
@@ -53,7 +86,8 @@ fn log_warn(msg: &str) {
 #[derive(Parser)]
 #[command(
     name = "downloader",
-    about = "Download a file from a URL and check its checksum"
+    about = "Download a file from a URL and check its checksum",
+    after_help = EXAMPLE_HELP.as_str()
 )]
 struct Cli {
     /// Force download even if the checksum is invalid or not found
