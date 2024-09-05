@@ -108,7 +108,11 @@ async fn run() -> anyhow::Result<()> {
     } else {
         LevelFilter::Info
     };
-    Logger::new().with_level(log_level).init().unwrap();
+    Logger::new()
+        .with_level(log_level)
+        .error_to_stderr()
+        .init()
+        .unwrap();
 
     let mut url_path = url
         .path_segments()
