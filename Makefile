@@ -7,6 +7,37 @@ linux-static:
 	docker build -t asfd-build .
 	docker run -v $$PWD:/asfd -w /asfd -u "$$(id -u):$$(id -g)" -it --rm asfd-build ash -c "OPENSSL_STATIC=1  OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include cargo build $${PROFILE:+--$${PROFILE}}"
 
+## RELEASE step 1: Start our workflow generating artifacts.
+gh-build-binaries:
+	@echo "starting workflow"
+	gh workflow run .github/workflows/ci.yml
+	@echo "take note of the just started run"
+	gh run list
+	@echo "now wait for the run to be finished, eg with make a-wait-run"
+
+## RELEASE step 2: Wait for run RUN_ID to complete
+gh-wait-run:
+	[[ -n "$(RUN_ID)" ]] || { echo -2 "RUN_ID is required" ; exit 1; }
+	while [[ $$(gh run list --json databaseId,status -q '.[] | select (.databaseId==$(RUN_ID)).status') != "completed" ]]; do  \
+		echo "Waiting for run to completed"; \
+		sleep 10; \
+	done
+
+## RELEASE step 3: Download all artifacts of run RUN_ID
+gh-download-artifacts:
+	[[ -n "$(RUN_ID)" ]] || { echo -2 "RUN_ID is required" ; exit 1; }
+	gh run download $(RUN_ID)
+
+## RELEASE step 4: Create a release/ directory and generate files of a Github release in it.
+gh-prepare-release:
+	mkdir release; \
+  for dir in asfd-*; do \
+		cp LICENSE $$dir/; \
+		if [[ ! $$dir =~ windows ]]; then chmod +x $$dir/asfd; fi; \
+		tar zcvf release/$$dir.tar.gz $$dir; \
+	done; \
+	(cd release; sha256sum * > checksums.txt;)
+
 help:
 	@echo "$$(tput bold)Available rules:$$(tput sgr0)"
 	@echo
