@@ -43,6 +43,7 @@ gh-prepare-release:
 		cp LICENSE $$dir/; \
 		if [[ ! $$dir =~ windows ]]; then chmod +x $$dir/asfd; fi; \
 		tar zcvf release/$$dir.tar.gz $$dir; \
+		rm -r $${dir:?dir must be defined}; \
 	done; \
 	(cd release; sha256sum * > checksums.txt;)
 	@echo "-------------------------------------------------------------------------"
