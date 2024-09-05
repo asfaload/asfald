@@ -13,7 +13,9 @@ gh-build-binaries:
 	gh workflow run .github/workflows/ci.yml
 	@echo "take note of the just started run"
 	gh run list
-	@echo "now wait for the run to be finished, eg with make a-wait-run"
+	@echo "-------------------------------------------------------------------------"
+	@echo "now wait for the run to be finished, eg with make gh-wait-run RUN_ID=XXXX"
+	@echo "-------------------------------------------------------------------------"
 
 ## RELEASE step 2: Wait for run RUN_ID to complete
 gh-wait-run:
@@ -22,11 +24,17 @@ gh-wait-run:
 		echo "Waiting for run to completed"; \
 		sleep 10; \
 	done
+	@echo "---------------------------------------------------------------------------------"
+	@echo "now download the artifacts, eg with make gh-download-artifacts RUN_ID=$(RUN_ID)"
+	@echo "---------------------------------------------------------------------------------"
 
 ## RELEASE step 3: Download all artifacts of run RUN_ID
 gh-download-artifacts:
 	[[ -n "$(RUN_ID)" ]] || { echo -2 "RUN_ID is required" ; exit 1; }
 	gh run download $(RUN_ID)
+	@echo "-------------------------------------------------------------------------"
+	@echo "now you can prepare the release locally, eg with make gh-prepare-release"
+	@echo "-------------------------------------------------------------------------"
 
 ## RELEASE step 4: Create a release/ directory and generate files of a Github release in it.
 gh-prepare-release:
@@ -37,6 +45,9 @@ gh-prepare-release:
 		tar zcvf release/$$dir.tar.gz $$dir; \
 	done; \
 	(cd release; sha256sum * > checksums.txt;)
+	@echo "-------------------------------------------------------------------------"
+	@echo "The release artifacts are available under release/"
+	@echo "-------------------------------------------------------------------------"
 
 help:
 	@echo "$$(tput bold)Available rules:$$(tput sgr0)"
