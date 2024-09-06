@@ -89,7 +89,7 @@ fn log_warn(msg: &str) {
 
 #[derive(Parser)]
 #[command(
-    name = "downloader",
+    name = "asfd",
     about = "Download a file from a URL and check its checksum",
     after_help = EXAMPLE_HELP.as_str()
 )]
