@@ -3,6 +3,7 @@ use clap::Parser;
 use console::{style, Emoji};
 use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use log::{error, info, warn, LevelFilter};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -11,6 +12,9 @@ use url::Url;
 
 mod checksum;
 use checksum::{Checksum, ChecksumValidator};
+
+mod logger;
+use logger::Logger;
 
 static CHECKSUM_FILES: &[&str] = &[
     "CHECKSUM.txt",
@@ -32,15 +36,15 @@ static INVALID: Emoji<'_, '_> = Emoji("❌", "");
 static ERROR: Emoji<'_, '_> = Emoji("🚨", "/!\\");
 
 fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
-    println!("{} {}", emoji, msg);
+    info!("{} {}", emoji, msg);
 }
 
 fn log_err(msg: &str) {
-    println!("{} {}", ERROR, style(msg).bold().red());
+    error!("{} {}", ERROR, style(msg).bold().red());
 }
 
 fn log_warn(msg: &str) {
-    println!("{} {}", WARN, style(msg).bold().yellow());
+    warn!("{} {}", WARN, style(msg).bold().yellow());
 }
 
 #[derive(Parser)]
@@ -49,6 +53,10 @@ fn log_warn(msg: &str) {
     about = "Download a file from a URL and check its checksum"
 )]
 struct Cli {
+    /// Do not print any output
+    #[arg(short = 'q', long = "quiet")]
+    quiet: bool,
+
     /// Force download even if the checksum is invalid or not found
     #[arg(short = 'f', long = "force")]
     force: bool,
@@ -86,12 +94,25 @@ async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidato
 async fn main() {
     if let Err(e) = run().await {
         log_err(e.to_string().as_str());
+        std::process::exit(1);
     }
 }
 
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let url = args.url;
+
+    // Initialise the logger:
+    let log_level = if args.quiet {
+        LevelFilter::Off
+    } else {
+        LevelFilter::Info
+    };
+    Logger::new()
+        .with_level(log_level)
+        .error_to_stderr()
+        .init()
+        .unwrap();
 
     let mut url_path = url
         .path_segments()
@@ -146,7 +167,11 @@ async fn run() -> anyhow::Result<()> {
     let file_size = response.content_length();
     let mut data = response.bytes_stream();
 
-    let pb = ProgressBar::new(file_size.unwrap_or(0));
+    let pb = if args.quiet {
+        ProgressBar::hidden()
+    } else {
+        ProgressBar::new(file_size.unwrap_or(0))
+    };
 
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta_precise})")
             .unwrap()
