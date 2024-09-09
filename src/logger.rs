@@ -1,29 +1,21 @@
 use log::{LevelFilter, Log, Metadata, Record};
 
 /// A simple logger that writes error messages to stderr and other messages to stdout.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Logger {
     pub level: LevelFilter,
-    pub stderr: bool,
 }
 
 impl Logger {
     pub fn new() -> Self {
         Self {
             level: LevelFilter::Info,
-            stderr: false,
         }
     }
 
     pub fn with_level(self, level: LevelFilter) -> Self {
         Self { level, ..self }
-    }
-
-    pub fn error_to_stderr(self) -> Self {
-        Self {
-            stderr: true,
-            ..self
-        }
     }
 
     pub fn init(self) -> Result<(), log::SetLoggerError> {
