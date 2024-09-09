@@ -7,6 +7,10 @@ linux-static:
 	docker build -t asfd-build .
 	docker run -v $$PWD:/asfd -w /asfd -u "$$(id -u):$$(id -g)" -it --rm asfd-build ash -c "OPENSSL_STATIC=1  OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include cargo build $${PROFILE:+--$${PROFILE}}"
 
+## Perform validations of the code and compilation (warnings are errors).
+check:
+	cargo rustc -- -D warnings
+
 ## RELEASE step 1: Start our workflow generating artifacts.
 gh-build-binaries:
 	@echo "starting workflow"
