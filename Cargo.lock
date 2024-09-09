@@ -80,11 +80,13 @@ dependencies = [
  "clap",
  "console",
  "digest",
+ "envsubst",
  "futures",
  "hex",
  "indicatif",
  "log",
  "md-5",
+ "once_cell",
  "reqwest",
  "sha1",
  "sha2",
@@ -262,6 +264,15 @@ name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
+
+[[package]]
+name = "envsubst"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf2f29f6ee674d1229e5715dfc7e24f14395a20d66949e36032de68b31542643"
+dependencies = [
+ "thiserror",
+]
 
 [[package]]
 name = "errno"

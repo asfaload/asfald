@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use clap::Parser;
 use console::{style, Emoji};
 use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, warn, LevelFilter};
+use once_cell::sync::Lazy;
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -16,15 +19,23 @@ use checksum::{Checksum, ChecksumValidator};
 mod logger;
 use logger::Logger;
 
-static CHECKSUM_FILES: &[&str] = &[
-    "CHECKSUM.txt",
-    "checksum.txt",
-    "CHECKSUMS.txt",
-    "checksums.txt",
-    "SHASUMS256.txt",
-    "SHASUMS256",
-    // TODO add more patterns
-];
+static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
+    vec![
+        // Define checksum file patterns here. Variables are availabe to define the patterns:
+        //   - ${{path}}: The target URL path, excluding the filename.
+        //   - ${{file}}: The filename of the target URL.
+        //   - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
+        "${path}/CHECKSUM.txt".to_string(),
+        "${path}/checksum.txt".to_string(),
+        "${path}/CHECKSUMS.txt".to_string(),
+        "${path}/CHECKSUMS256.txt".to_string(),
+        "${path}/checksums.txt".to_string(),
+        "${path}/SHASUMS256.txt".to_string(),
+        "${path}/SHASUMS256".to_string(),
+        "${fullpath}.sha256sum".to_string(),
+        // TODO add more patterns
+    ]
+});
 
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
@@ -34,6 +45,35 @@ static DOWNLOAD: Emoji<'_, '_> = Emoji("🚚", "");
 static VALID: Emoji<'_, '_> = Emoji("✅", "");
 static INVALID: Emoji<'_, '_> = Emoji("❌", "");
 static ERROR: Emoji<'_, '_> = Emoji("🚨", "/!\\");
+
+static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
+    format!("
+{}
+
+The -p/--pattern <TEMPLATE> flag allows you to specify additional checksum file
+patterns to search for, beyond those that the app already looks for by default.
+You can repeat this option to search for multiple patterns.
+
+The <TEMPLATE> can either be a full URL path to a checksum file or a template
+using predefined variables. These variables are:
+
+ - ${{path}}: The target URL path, excluding the filename.
+ - ${{file}}: The filename of the target URL.
+ - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
+
+Searching for Checksums ending with .checksum:
+
+ $ asfd -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
+
+This will look for a possible checksum at the following URL:
+https://github.com/user/repo/releases/download/v0.0.1/mybinary.checksum
+
+Specifying a full checksum URL:
+
+ $ asfd -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
+
+", style("Examples:").bold().underlined())
+});
 
 fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
     info!("{} {}", emoji, msg);
@@ -50,7 +90,8 @@ fn log_warn(msg: &str) {
 #[derive(Parser)]
 #[command(
     name = "downloader",
-    about = "Download a file from a URL and check its checksum"
+    about = "Download a file from a URL and check its checksum",
+    after_help = EXAMPLE_HELP.as_str()
 )]
 struct Cli {
     /// Do not print any output
@@ -64,6 +105,10 @@ struct Cli {
     /// Specify the output file
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     output: Option<String>,
+
+    /// Specify additional checksums or checksum patterns to search for
+    #[arg(short = 'p', long = "pattern", value_name = "TEMPLATE")]
+    checksum_patterns: Vec<String>,
 
     /// The URL to download the file from
     url: Url,
@@ -114,28 +159,40 @@ async fn run() -> anyhow::Result<()> {
         .init()
         .unwrap();
 
-    let mut url_path = url
+    let url_path = url
         .path_segments()
         .map(|c| c.map(|s| s.to_owned()).collect::<Vec<_>>())
         .unwrap_or_else(std::vec::Vec::new);
 
     let file = url_path.last().context("No file found in URL")?.to_owned();
+    let path = url_path[..url_path.len() - 1].join("/");
 
     log_step(SEARCH, "Looking for checksum files...");
 
-    // Fetch the checksum files from the URL
-    let checksum_dl = CHECKSUM_FILES.iter().map(|changelog| {
-        let mut nurl = url.clone();
+    // Create a hashmap with the path and file to be used in the templates
+    let vars = HashMap::from([
+        ("fullpath".to_string(), url_path.join("/")),
+        ("path".to_string(), path),
+        ("file".to_string(), file.clone()),
+    ]);
+    // This shouldn't happen:
+    envsubst::validate_vars(&vars).context("unable to validate substitution variables")?;
 
-        // Swap the file name in the URL with the changelog name
-        url_path.pop();
-        url_path.push(changelog.to_string());
-        nurl.set_path(url_path.join("/").as_str());
+    // Create a stream of checksum downloads
+    let checksums_patterns = CHECKSUMS_FILES
+        .iter()
+        .chain(args.checksum_patterns.iter())
+        // It is safe to unwrap as the only possible error is catched by the validate_vars above
+        .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+        .map(|path| {
+            // Build the URL for the checksum file & create a future to fetch it
+            let mut nurl = url.clone();
+            nurl.set_path(&path);
+            Box::pin(fetch_checksum(nurl, &file))
+        });
 
-        Box::pin(fetch_checksum(nurl, &file))
-    });
-
-    let mut checksum = match select_ok(checksum_dl).await {
+    // Select the first checksum file that is found
+    let mut checksum = match select_ok(checksums_patterns).await {
         Ok((checksum, _)) => {
             log_step(FOUND, "Checksum file found !");
             Some(checksum)
