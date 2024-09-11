@@ -54,6 +54,22 @@ gh-prepare-release:
 	@echo "The release artifacts are available under release/"
 	@echo "-------------------------------------------------------------------------"
 
+# name of the tmux session running the http server started for the tests
+TMUX-SESSION := asfaload-test-http-server
+# shell command to detect if the tmux session exists
+TMUX-SESSION-EXISTS := tmux has-session -t $(TMUX-SESSION) &> /dev/null
+start-test-server:
+	$(TMUX-SESSION-EXISTS) || tmux new-session -s "$(TMUX-SESSION)" -c tests/data -d python -m http.server 9988
+
+stop-test-server:
+	$(TMUX-SESSION-EXISTS) && tmux kill-session -t "$(TMUX-SESSION)"
+
+## Starts a local http server in tmux and run the tests, before stopping the server.
+test: start-test-server
+	cargo test
+	$(MAKE) stop-test-server
+
+
 help:
 	@echo "$$(tput bold)Available rules:$$(tput sgr0)"
 	@echo
