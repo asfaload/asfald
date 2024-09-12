@@ -182,23 +182,54 @@ async fn run() -> anyhow::Result<()> {
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
         // Build the URL where to get the checksums file.
         .map(|path| {
-            // Template is a full url
+            // Template is supposedly a full url
             if path.starts_with("http") {
                 let url_result = Url::parse(&path);
-                match url_result {
-                    Ok(u) => Some(u),
-                    Err(_) => None,
+                // Check if we parse a useable Url. Needed because
+                // "httplocalhost:9989/remote/checksums.txt" would be parsed successfully
+                // with scheme "httplocalhost"
+                let checksums_url =
+                    match url_result {
+                    // If the url could be parsed, check the result's validity
+                    Ok(u) => {
+                        // If the scheme is http or https, we're good
+                        if u.scheme() == "http" || u.scheme() == "https "{
+                            Some(u)
+                        }
+                        // Otherwise we do not have a usable url
+                        else { None }
+                    }
+                    // If no url could be parsed, use it as path on the server
+                    Err(_) => {
+                        let mut nurl = url.clone();
+                        nurl.set_path(&path);
+                        Some(nurl)
+                    }
+                };
+
+                // If we received a pattern starting with http, but the scheme parsed in not http
+                // or https, warn the user and use the pattern as path on the server of the file to
+                // be downloaded
+                match checksums_url {
+                    Some(u) => u,
+                    None => {
+                        log_warn(
+                            "Checksums file template started with http, but could not be parsed as URL. Using it as path on same server as file to download.",
+                        );
+                        let mut nurl = url.clone();
+                        nurl.set_path(&path);
+                        nurl
+
+                    }
                 }
             }
             // Template is a path, look on same server as file
             else {
                 let mut nurl = url.clone();
                 nurl.set_path(&path);
-                Some(nurl)
+                nurl
             }
         })
-        .filter(|x| x.is_some())
-        .map(|o| o.unwrap())
         .map(|url| Box::pin(fetch_checksum(url, &file)));
 
     // Select the first checksum file that is found
