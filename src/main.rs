@@ -182,6 +182,13 @@ async fn run() -> anyhow::Result<()> {
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
         // Build the URL where to get the checksums file.
         .map(|path| {
+            // Helper to build the replace the path of url by the path passed as argument
+            let update_url_path =  |url:&Url,path:&String| -> Url {
+                        let mut nurl = url.clone();
+                        nurl.set_path(path);
+                        nurl
+
+            };
             // Template is supposedly a full url
             if path.starts_with("http") {
                 let url_result = Url::parse(&path);
@@ -201,9 +208,7 @@ async fn run() -> anyhow::Result<()> {
                     }
                     // If no url could be parsed, use it as path on the server
                     Err(_) => {
-                        let mut nurl = url.clone();
-                        nurl.set_path(&path);
-                        Some(nurl)
+                        Some(update_url_path(&url,&path))
                     }
                 };
 
@@ -216,18 +221,13 @@ async fn run() -> anyhow::Result<()> {
                         log_warn(
                             "Checksums file template started with http, but could not be parsed as URL. Using it as path on same server as file to download.",
                         );
-                        let mut nurl = url.clone();
-                        nurl.set_path(&path);
-                        nurl
-
+                        update_url_path(&url,&path)
                     }
                 }
             }
             // Template is a path, look on same server as file
             else {
-                let mut nurl = url.clone();
-                nurl.set_path(&path);
-                nurl
+                update_url_path(&url,&path)
             }
         })
         .map(|url| Box::pin(fetch_checksum(url, &file)));
