@@ -185,9 +185,17 @@ async fn run() -> anyhow::Result<()> {
             // Helper to build the replace the path of url by the path passed as argument
             let update_url_path =  |url:&Url,path:&String| -> Url {
                         let mut nurl = url.clone();
-                        nurl.set_path(path);
+                        // The path is always considered from the root.
+                        // We add the / here so the url is constructed correctly later on.
+                        let root_path =
+                            if path.starts_with("/") {
+                                path.to_string()
+                            }
+                            else {
+                                "/".to_string() + path
+                            };
+                        nurl.set_path(&root_path);
                         nurl
-
             };
             // Template is supposedly a full url
             if path.starts_with("http") {
