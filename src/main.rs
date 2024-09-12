@@ -180,12 +180,57 @@ async fn run() -> anyhow::Result<()> {
         .chain(args.checksum_patterns.iter())
         // It is safe to unwrap as the only possible error is catched by the validate_vars above
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+        // Build the URL where to get the checksums file.
         .map(|path| {
-            // Build the URL for the checksum file & create a future to fetch it
-            let mut nurl = url.clone();
-            nurl.set_path(&path);
-            Box::pin(fetch_checksum(nurl, &file))
-        });
+            // Helper to build the replace the path of url by the path passed as argument
+            let update_url_path =  |url:&Url,path:&String| -> Url {
+                        let mut nurl = url.clone();
+                        nurl.set_path(path);
+                        nurl
+
+            };
+            // Template is supposedly a full url
+            if path.starts_with("http") {
+                let url_result = Url::parse(&path);
+                // Check if we parse a useable Url. Needed because
+                // "httplocalhost:9989/remote/checksums.txt" would be parsed successfully
+                // with scheme "httplocalhost"
+                let checksums_url =
+                    match url_result {
+                    // If the url could be parsed, check the result's validity
+                    Ok(u) => {
+                        // If the scheme is http or https, we're good
+                        if u.scheme() == "http" || u.scheme() == "https "{
+                            Some(u)
+                        }
+                        // Otherwise we do not have a usable url
+                        else { None }
+                    }
+                    // If no url could be parsed, use it as path on the server
+                    Err(_) => {
+                        Some(update_url_path(&url,&path))
+                    }
+                };
+
+                // If we received a pattern starting with http, but the scheme parsed in not http
+                // or https, warn the user and use the pattern as path on the server of the file to
+                // be downloaded
+                match checksums_url {
+                    Some(u) => u,
+                    None => {
+                        log_warn(
+                            "Checksums file template started with http, but could not be parsed as URL. Using it as path on same server as file to download.",
+                        );
+                        update_url_path(&url,&path)
+                    }
+                }
+            }
+            // Template is a path, look on same server as file
+            else {
+                update_url_path(&url,&path)
+            }
+        })
+        .map(|url| Box::pin(fetch_checksum(url, &file)));
 
     // Select the first checksum file that is found
     let mut checksum = match select_ok(checksums_patterns).await {

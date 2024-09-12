@@ -58,12 +58,15 @@ gh-prepare-release:
 TMUX-SESSION := asfaload-test-http-server
 # shell command to detect if the tmux session exists
 TMUX-SESSION-EXISTS := tmux has-session -t $(TMUX-SESSION) &> /dev/null
+TMUX-SESSION-EXISTS_2 := tmux has-session -t $(TMUX-SESSION)_2 &> /dev/null
 CURRENT_DIR := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 start-test-server:
 	$(TMUX-SESSION-EXISTS) || tmux new-session -s "$(TMUX-SESSION)" -c $(CURRENT_DIR)/tests/data/server1 -d python -m http.server 9988
+	$(TMUX-SESSION-EXISTS_2) || tmux new-session -s "$(TMUX-SESSION)_2" -c $(CURRENT_DIR)/tests/data/server2 -d python -m http.server 9989
 
 stop-test-server:
-	$(TMUX-SESSION-EXISTS) && tmux kill-session -t "$(TMUX-SESSION)"
+	$(TMUX-SESSION-EXISTS) && tmux kill-session -t "$(TMUX-SESSION)" || true
+	$(TMUX-SESSION-EXISTS_2) && tmux kill-session -t "$(TMUX-SESSION)_2" || true
 
 ## Starts a local http server in tmux and run the tests, before stopping the server.
 test: start-test-server
