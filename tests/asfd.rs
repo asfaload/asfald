@@ -111,6 +111,30 @@ fn file_with_valid_checksum_p_fullpath() {
 }
 
 #[test]
+// Test -p flag
+fn file_with_valid_checksum_p_file_pattern() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfd");
+    // Download the file to our dedicated directory
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    // Specify the url where to get the checksums file
+    cmd.arg("-p");
+    cmd.arg(snd_url("/remote_p_file_pattern/publish/${file}.checksum"));
+    // Get the file from its server
+    cmd.arg(url("/remote_p_file_pattern/the_file.txt"));
+
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !"))
+        .stdout(contains("File\'s checksum is valid !"));
+
+    let is_file_pred = is_file();
+    // Check the original filename is not present
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+#[test]
 // Test -q flag
 fn file_with_valid_checksum_q() {
     // Create out dedicated directory
