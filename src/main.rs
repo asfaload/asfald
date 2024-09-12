@@ -180,12 +180,26 @@ async fn run() -> anyhow::Result<()> {
         .chain(args.checksum_patterns.iter())
         // It is safe to unwrap as the only possible error is catched by the validate_vars above
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+        // Build the URL where to get the checksums file.
         .map(|path| {
-            // Build the URL for the checksum file & create a future to fetch it
-            let mut nurl = url.clone();
-            nurl.set_path(&path);
-            Box::pin(fetch_checksum(nurl, &file))
-        });
+            // Template is a full url
+            if path.starts_with("http") {
+                let url_result = Url::parse(&path);
+                match url_result {
+                    Ok(u) => Some(u),
+                    Err(_) => None,
+                }
+            }
+            // Template is a path, look on same server as file
+            else {
+                let mut nurl = url.clone();
+                nurl.set_path(&path);
+                Some(nurl)
+            }
+        })
+        .filter(|x| x.is_some())
+        .map(|o| o.unwrap())
+        .map(|url| Box::pin(fetch_checksum(url, &file)));
 
     // Select the first checksum file that is found
     let mut checksum = match select_ok(checksums_patterns).await {
