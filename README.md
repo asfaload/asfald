@@ -1,5 +1,10 @@
 # About
 
+`asfd` is a command line downloader which validates the integrity of the downloaded file against a checksums file published alongside it.
+This is done by numerous projects in their releases (see for example [Lazygit](https://github.com/jesseduffield/lazydocker), [mise](https://github.com/jdx/mise), [watchexec](https://github.com/watchexec/watchexec), [Github's CLI](https://github.com/cli/cli/), [act](https://github.com/nektos/act/releases/tag/v0.2.66)(run Github Actions locally),[neovim](https://github.com/neovim/neovim), ...).
+
+The tool recognises different naming conventions ([CHECKSUM.txt, checksums.txt,....](https://github.com/asfaload/asfd/blob/main/src/main.rs#L15)) but also takes a flag to manually the checksums file name.
+
 # Building
 
 ## Dynamic linking on Linux
