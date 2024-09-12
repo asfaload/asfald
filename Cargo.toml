@@ -30,3 +30,5 @@ url = "2.5.2"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
+predicates = "3.1.2"
+testdir = "0.9.1"
