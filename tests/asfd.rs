@@ -206,6 +206,57 @@ fn file_with_valid_checksum_q() {
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
 }
+
+#[test]
+// Test without checksums file
+fn file_without_checksums_file() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .failure()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("File\'s checksum is valid !").not())
+        .stderr(contains("Unable to fetch checksum file"));
+
+    let is_file_pred = is_file();
+    // Check no file was downloaded
+    assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+
+#[test]
+// Test without checksums file
+fn file_without_checksums_file_but_force() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("-f");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("File\'s checksum is valid !").not())
+        .stdout(contains(
+            "Checksum file not found, but continuing due to --force flag",
+        ))
+        .stderr(predicates::str::is_empty());
+
+    let is_file_pred = is_file();
+    // Check no file was downloaded
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
 fn file_with_invalid_checksum() {
