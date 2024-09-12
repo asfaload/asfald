@@ -56,6 +56,25 @@ fn file_with_valid_checksum_o() {
 }
 
 #[test]
+// Test -q flag
+fn file_with_valid_checksum_q() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("-q");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/valid/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert().success().stdout(predicates::str::is_empty());
+
+    let is_file_pred = is_file();
+    // Check the original filename is not present
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+#[test]
 // File downloaded is present in checksums file, but the checksum is different
 fn file_with_invalid_checksum() {
     let mut cmd = Command::new("target/debug/asfd");
