@@ -98,9 +98,13 @@ struct Cli {
     #[arg(short = 'q', long = "quiet")]
     quiet: bool,
 
+    /// Force download even if the checksum is not found
+    #[arg(short = 'f', long = "force-absent")]
+    force_absent: bool,
+
     /// Force download even if the checksum is invalid or not found
-    #[arg(short = 'f', long = "force")]
-    force: bool,
+    #[arg(short = 'F', long = "force-invalid")]
+    force_invalid: bool,
 
     /// Specify the output file
     #[arg(short = 'o', long = "output", value_name = "FILE")]
@@ -247,8 +251,8 @@ async fn run() -> anyhow::Result<()> {
             Some(checksum)
         }
         Err(e) => {
-            if args.force {
-                log_warn("Checksum file not found, but continuing due to --force flag");
+            if args.force_absent || args.force_invalid {
+                log_warn("Checksum file not found, but continuing due to --force-absent or --force-invalid flag");
                 None
             } else {
                 return Err(e);
@@ -311,8 +315,9 @@ async fn run() -> anyhow::Result<()> {
         // Validate the checksum, if it fails and the force flag is not set, return early
         if checksum.validate().is_err() {
             log_step(INVALID, "File's checksum is invalid !");
-            if args.force {
-                log_warn("... but continuing due to --force flag");
+            if args.force_invalid {
+                log_warn("... but continuing due to --force-invalid flag");
+                log_warn("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️");
             } else {
                 anyhow::bail!("Checksum validation failed");
             }

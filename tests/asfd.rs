@@ -231,8 +231,8 @@ fn file_without_checksums_file() {
 }
 
 #[test]
-// Test without checksums file
-fn file_without_checksums_file_but_force() {
+// Test without checksums file and force-absent
+fn file_without_checksums_file_but_force_absent() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
     let mut cmd = Command::new("target/debug/asfd");
@@ -248,7 +248,34 @@ fn file_without_checksums_file_but_force() {
         .stdout(contains("Checksum file found !").not())
         .stdout(contains("File\'s checksum is valid !").not())
         .stdout(contains(
-            "Checksum file not found, but continuing due to --force flag",
+            "Checksum file not found, but continuing due to --force-absent or --force-invalid flag",
+        ))
+        .stderr(predicates::str::is_empty());
+
+    let is_file_pred = is_file();
+    // Check no file was downloaded
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+
+#[test]
+// Test without checksums file and force-invalidn, which implies force-absent
+fn file_without_checksums_file_but_force_invalid() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("-F");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("File\'s checksum is valid !").not())
+        .stdout(contains(
+            "Checksum file not found, but continuing due to --force-absent or --force-invalid flag",
         ))
         .stderr(predicates::str::is_empty());
 
@@ -266,4 +293,31 @@ fn file_with_invalid_checksum() {
         .failure()
         .stdout(contains("Checksum file found !"))
         .stdout(contains("File\'s checksum is invalid !"));
+}
+
+#[test]
+// File downloaded is present in checksums file, but the checksum is different
+// With --force-absent: should validate the checksum if it is present
+fn file_with_invalid_checksum_force_absent() {
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg(url("/invalid_checksum/the_file.txt"));
+    cmd.arg("-f");
+    cmd.assert()
+        .failure()
+        .stdout(contains("Checksum file found !"))
+        .stdout(contains("File\'s checksum is invalid !"));
+}
+
+#[test]
+// File downloaded is present in checksums file, but the checksum is different
+// With --force-absent: should validate the checksum if it is present
+fn file_with_invalid_checksum_force_invalid() {
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg(url("/invalid_checksum/the_file.txt"));
+    cmd.arg("-F");
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !"))
+        .stdout(contains("File\'s checksum is invalid !"))
+        .stdout(contains("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️"));
 }
