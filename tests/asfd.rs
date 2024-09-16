@@ -321,3 +321,20 @@ fn file_with_invalid_checksum_force_invalid() {
         .stdout(contains("File\'s checksum is invalid !"))
         .stdout(contains("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️"));
 }
+
+#[test]
+// Test successful download without any flag
+fn file_with_path_and_valid_checksum() {
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg(url("/checksums_with_path/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !"))
+        .stdout(contains("File\'s checksum is valid !"));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new("./the_file.txt")));
+    let _ = std::fs::remove_file("./the_file.txt");
+}
