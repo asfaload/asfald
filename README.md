@@ -34,6 +34,61 @@ INFO 🚚 Downloading file...
   [00:00:00] [##################################################] 2.15 MiB/2.15 MiB (00:00:00)
 INFO ✅ File's checksum is valid !
 ```
+# Using asfd
+
+## On the command line
+Using `asfd` is easy: just call it with the file to be downloaded's URL as argument. For example:
+```
+asfd https://github.com/asfaload/asfd/releases/download/v0.0.1/asfd-x86_64-unknown-freebsd.tar.gz
+```
+
+If the checksum could not be validated, the execution exits with a non-zero status. This makes `asfd` usable in script, especially when combined with the `--quiet` flag.
+
+
+```bash
+lazygit_url="https://github.com/jesseduffield/lazygit/releases/download/v0.44.0/lazygit_0.44.0_freebsd_arm64.tar.gz"
+if asfd -q  "$lazygit_url"; then
+  echo "proceeding with lazygit install";
+else
+  echo "problem getting lazygit";
+fi
+```
+
+## In Dockerfiles
+
+You can safely download and install `asfd` in your linux containers by adding this snippet to your `Dockerfile` (you can choose the version to install by modifying the value of `asfd_version` on the first line):
+```
+RUN bash -c 'asfd_version=v0.0.1 && \
+    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl.tar.gz && \
+    sha256sum --ignore-missing -c <(curl --silent  https://asfaload.com/asfd-checksums/${asfd_version}) && \
+    tar zxvf asfd-x86_64-unknown-linux-musl.tar.gz -C /usr/bin --wildcards "*/asfd" --strip-components=1'
+```
+
+This will download `asfd` from Github, validate the file's checksum against the checksums published on [asfaload.com](http://www.asfaload.com/asfd-checksums) and if successful, place the `asfd` binary in the container's `/usr/bin` directory.
+
+<details>
+<summary>
+Example: a full `Dockerfile` letting you run `asfd` in a container
+</summary>
+
+```
+FROM ubuntu
+
+RUN apt-get update && apt-get install -y curl
+RUN bash -c 'asfd_version=v0.0.1 && \
+    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl.tar.gz && \
+    sha256sum --ignore-missing -c <(curl --silent  https://asfaload.com/asfd-checksums/${asfd_version}) && \
+    tar zxvf asfd-x86_64-unknown-linux-musl.tar.gz -C /usr/bin --wildcards "*/asfd" --strip-components=1'
+
+ENTRYPOINT [ "/usr/bin/asfd" ]
+```
+Using the image built with this `Dockerfile`, you can display the help of `asfd` with
+```
+docker run -it --rm 0f8748 --help
+```
+
+</details>
+
 
 # Release checksums files locations
 
