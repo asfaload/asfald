@@ -171,7 +171,7 @@ fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
         // If the url could be parsed, check the result's validity
         Ok(u) => {
             // If the scheme is http or https, we're good
-            if u.scheme() == "http" || u.scheme() == "https " {
+            if u.scheme() == "http" || u.scheme() == "https" {
                 Some(u)
             }
             // Otherwise we do not have a usable url
