@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, path::Path, str::FromStr};
 
 use digest::{Digest, DynDigest};
 
@@ -8,6 +8,8 @@ pub enum ChecksumError {
     UnknownChecksumAlgorithm,
     #[error("Invalid checksum format: {0}")]
     ChecksumFormat(String),
+    #[error("Invalid filename: {0}")]
+    FileNamePart(String),
     #[error("Invalid checksum: got {0} expected {1}")]
     InvalidChecksum(String, String),
 }
@@ -64,6 +66,14 @@ impl FromStr for Checksum {
                 .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))?;
 
             algorithm = ChecksumAlgorithm::infer(hash);
+            // Manipulate the filename to ignore its path as we do not use it anyway
+            // and it causes us trouble if left in
+            let filepath = Path::new(filename);
+            let filename = filepath
+                // Ignore path component of the filename
+                .file_name()
+                .and_then(|p| p.to_str())
+                .ok_or(ChecksumError::FileNamePart(line.to_owned()))?;
             files.insert(filename.trim().to_owned(), hash.trim().to_owned());
         }
 
