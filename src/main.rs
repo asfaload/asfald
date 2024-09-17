@@ -341,3 +341,47 @@ async fn run() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod helpers_tests {
+    use super::*;
+
+    #[test]
+    fn test_update_url_path() {
+        let new_path = "/asfd-checksums/v0.0.1";
+        let url1 = Url::parse("http://www.asfaload.com/blog").unwrap();
+        let url2 = update_url_path(&url1, new_path);
+        assert_eq!(url1.path(), "/blog");
+        assert_eq!(url2.path(), new_path);
+    }
+    #[test]
+    fn test_handle_pattern_https_same_server() {
+        let checksum_input = "https://www.example.com/public/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(checksum_input, o.as_ref().unwrap().to_string());
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
+    #[test]
+    fn test_handle_pattern_https_other_server() {
+        let checksum_input = "https://www.internal.example.com/checksums/public/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(checksum_input, o.as_ref().unwrap().to_string());
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
+    #[test]
+    fn test_handle_pattern_path() {
+        let checksum_input = "/checksums/public/extended/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(
+            "https://www.example.com/checksums/public/extended/SHA256SUMS",
+            o.as_ref().unwrap().to_string()
+        );
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
+}
