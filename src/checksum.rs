@@ -51,6 +51,17 @@ impl Checksum {
     }
 }
 
+fn handle_file_path(filename: &str) -> Result<&str, ChecksumError> {
+    // Manipulate the filename to ignore its path as we do not use it anyway
+    // and it causes us trouble if left in
+    let filepath = Path::new(filename);
+    filepath
+        // Ignore path component of the filename
+        .file_name()
+        .and_then(|p| p.to_str())
+        .ok_or(ChecksumError::FileNamePart(filename.to_string()))
+}
+
 impl FromStr for Checksum {
     type Err = ChecksumError; // TODO: Implement proper error handling
 
@@ -66,14 +77,7 @@ impl FromStr for Checksum {
                 .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))?;
 
             algorithm = ChecksumAlgorithm::infer(hash);
-            // Manipulate the filename to ignore its path as we do not use it anyway
-            // and it causes us trouble if left in
-            let filepath = Path::new(filename);
-            let filename = filepath
-                // Ignore path component of the filename
-                .file_name()
-                .and_then(|p| p.to_str())
-                .ok_or(ChecksumError::FileNamePart(line.to_owned()))?;
+            let filename = handle_file_path(filename)?;
             files.insert(filename.trim().to_owned(), hash.trim().to_owned());
         }
 
@@ -106,5 +110,24 @@ impl ChecksumValidator {
         (hash.to_lowercase() == self.hash.to_lowercase())
             .then_some(())
             .ok_or(ChecksumError::InvalidChecksum(hash, self.hash))
+    }
+}
+
+#[cfg(test)]
+mod checksum_helpers_tests {
+    use super::*;
+
+    #[test]
+    // Do we remove all path components from filenames in the checksums file?
+    fn test_handle_file_path() {
+        let filename = "./my_file.txt";
+        let r = handle_file_path(filename);
+        assert!(r.is_ok());
+        assert_eq!("my_file.txt", r.unwrap());
+
+        let filename = "/path/to/file/my_file.txt";
+        let r = handle_file_path(filename);
+        assert!(r.is_ok());
+        assert_eq!("my_file.txt", r.unwrap());
     }
 }
