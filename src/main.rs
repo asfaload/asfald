@@ -39,6 +39,7 @@ static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
 
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
+static INFO: Emoji<'_, '_> = Emoji("ℹ️", "");
 static WARN: Emoji<'_, '_> = Emoji("⚠️", "");
 static TRASH: Emoji<'_, '_> = Emoji("🗑️", "");
 static DOWNLOAD: Emoji<'_, '_> = Emoji("🚚", "");
@@ -50,6 +51,7 @@ static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
     format!("
 {}
 
+{}
 The -p/--pattern <TEMPLATE> flag allows you to specify additional checksum file
 patterns to search for, beyond those that the app already looks for by default.
 You can repeat this option to search for multiple patterns.
@@ -72,11 +74,23 @@ Specifying a full checksum URL:
 
  $ asfd -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
 
-", style("Examples:").bold().underlined())
+{}
+The -H/--hash <HASH> flags allows to pass the hash value to use when validating the downloaded file.
+Doing this will allow you to detect when a file you download regularly was modified on the server. This
+is especially useful in Dockerfiles.
+When this flag is passed, no checksums file will be used.
+
+ $ asfd --hash 87b5fbf82d9258782ffbd141ffbeab954af3ce6ff7a1ad336c70196f40ac233c \\
+        https://github.com/asfaload/asfd/releases/download/v0.1.0/asfd-x86_64-unknown-linux-musl
+", style("Examples:").bold().underlined(), style("Custom checksums file").underlined(), style("Literal hash value").underlined())
 });
 
 fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
     info!("{} {}", emoji, msg);
+}
+
+fn log_info(msg: &str) {
+    info!("{} {}", INFO, msg);
 }
 
 fn log_err(msg: &str) {
@@ -122,6 +136,9 @@ struct ChecksumSource {
     /// Specify additional checksums or checksum patterns to search for
     #[arg(short = 'p', long = "pattern", value_name = "TEMPLATE")]
     checksum_patterns: Vec<String>,
+    /// Specify the checksum value for the downloaded file
+    #[arg(short = 'H', long = "hash", value_name = "HASH")]
+    hash_value: Option<String>,
 }
 
 async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
@@ -190,6 +207,28 @@ fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
         Err(_) => Some(update_url_path(url, path)),
     }
 }
+
+// If the path/pattern has the scheme http or https, return it, othewise use it with the url's host
+fn use_pattern_as_url_if_valid_scheme(url: &url::Url, pattern: &str) -> url::Url {
+    // Check if we parse a useable Url. Needed because
+    // "httplocalhost:9989/remote/checksums.txt" would be parsed successfully
+    // with scheme "httplocalhost"
+    let checksums_url = handle_pattern(url, pattern);
+
+    // If we received a pattern starting with http, but the scheme parsed in not http
+    // or https, warn the user and use the pattern as path on the server of the file to
+    // be downloaded
+    match checksums_url {
+        Some(u) => u,
+        None => {
+            log_warn(
+                "Checksums file template started with http, \
+                      but could not be parsed as URL. Using it as path on same server as file to download.",
+            );
+            update_url_path(url, pattern)
+        }
+    }
+}
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let checksum_flag = &args.checksum_source;
@@ -211,65 +250,61 @@ async fn run() -> anyhow::Result<()> {
     let file = url_path.last().context("No file found in URL")?.to_owned();
     let path = url_path[..url_path.len() - 1].join("/");
 
-    log_step(SEARCH, "Looking for checksum files...");
+    let mut checksum = match args.checksum_source.hash_value {
+        // The hash string was passed to the CLI with the flag --hash. We use it and
+        // don't look for a file on a server.
+        Some(hash) => {
+            log_info("Using hash passed as argument");
+            Checksum::from_hash(file.as_str(), hash.as_str())?.into_validator(file.as_str())
+        }
+        // No hash value was passed as argument to the CLI with the --hash flag.
+        // This means we need to look for the hash in a file.
+        None => {
+            log_info("Will for hash in a checksums file");
+            // Create a hashmap with the path and file to be used in the templates
+            let vars = HashMap::from([
+                ("fullpath".to_string(), url_path.join("/")),
+                ("path".to_string(), path),
+                ("file".to_string(), file.clone()),
+            ]);
+            // This shouldn't happen:
+            envsubst::validate_vars(&vars).context("unable to validate substitution variables")?;
 
-    // Create a hashmap with the path and file to be used in the templates
-    let vars = HashMap::from([
-        ("fullpath".to_string(), url_path.join("/")),
-        ("path".to_string(), path),
-        ("file".to_string(), file.clone()),
-    ]);
-    // This shouldn't happen:
-    envsubst::validate_vars(&vars).context("unable to validate substitution variables")?;
+            log_step(SEARCH, "Looking for checksum files...");
+            // Create a stream of checksum downloads
+            let checksums_patterns = CHECKSUMS_FILES
+                .iter()
+                .chain(checksum_flag.checksum_patterns.iter())
+                // It is safe to unwrap as the only possible error is catched by the validate_vars above
+                .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+                // Build the URL where to get the checksums file.
+                .map(|pattern| {
+                    // Helper to build the replace the path of url by the path passed as argument
+                    // Template is supposedly a full url
+                    if pattern.starts_with("http") {
+                        use_pattern_as_url_if_valid_scheme(&url, &pattern)
+                    }
+                    // Template is a path, look on same server as file
+                    else {
+                        update_url_path(&url, &pattern)
+                    }
+                })
+                .map(|url| Box::pin(fetch_checksum(url, &file)));
 
-    // Create a stream of checksum downloads
-    let checksums_patterns = CHECKSUMS_FILES
-        .iter()
-        .chain(checksum_flag.checksum_patterns.iter())
-        // It is safe to unwrap as the only possible error is catched by the validate_vars above
-        .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
-        // Build the URL where to get the checksums file.
-        .map(|path| {
-            // Helper to build the replace the path of url by the path passed as argument
-            // Template is supposedly a full url
-            if path.starts_with("http") {
-                // Check if we parse a useable Url. Needed because
-                // "httplocalhost:9989/remote/checksums.txt" would be parsed successfully
-                // with scheme "httplocalhost"
-                let checksums_url = handle_pattern(&url,&path);
-
-                // If we received a pattern starting with http, but the scheme parsed in not http
-                // or https, warn the user and use the pattern as path on the server of the file to
-                // be downloaded
-                match checksums_url {
-                    Some(u) => u,
-                    None => {
-                        log_warn(
-                            "Checksums file template started with http, but could not be parsed as URL. Using it as path on same server as file to download.",
-                        );
-                        update_url_path(&url,&path)
+            // Select the first checksum file that is found
+            match select_ok(checksums_patterns).await {
+                Ok((checksum, _)) => {
+                    log_step(FOUND, "Checksum file found !");
+                    Some(checksum)
+                }
+                Err(e) => {
+                    if args.force_absent || args.force_invalid {
+                        log_warn("Checksum file not found, but continuing due to --force-absent or --force-invalid flag");
+                        None
+                    } else {
+                        return Err(e);
                     }
                 }
-            }
-            // Template is a path, look on same server as file
-            else {
-                update_url_path(&url,&path)
-            }
-        })
-        .map(|url| Box::pin(fetch_checksum(url, &file)));
-
-    // Select the first checksum file that is found
-    let mut checksum = match select_ok(checksums_patterns).await {
-        Ok((checksum, _)) => {
-            log_step(FOUND, "Checksum file found !");
-            Some(checksum)
-        }
-        Err(e) => {
-            if args.force_absent || args.force_invalid {
-                log_warn("Checksum file not found, but continuing due to --force-absent or --force-invalid flag");
-                None
-            } else {
-                return Err(e);
             }
         }
     };
