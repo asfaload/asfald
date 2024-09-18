@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use clap::Parser;
+use clap::{Args, Parser};
 use console::{style, Emoji};
 use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -94,6 +94,8 @@ fn log_warn(msg: &str) {
     after_help = EXAMPLE_HELP.as_str()
 )]
 struct Cli {
+    #[command(flatten)]
+    checksum_source: ChecksumSource,
     /// Do not print any output
     #[arg(short = 'q', long = "quiet")]
     quiet: bool,
@@ -110,12 +112,16 @@ struct Cli {
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     output: Option<String>,
 
+    /// The URL to download the file from
+    url: Url,
+}
+
+#[derive(Args)]
+#[group(required = false, multiple = false)]
+struct ChecksumSource {
     /// Specify additional checksums or checksum patterns to search for
     #[arg(short = 'p', long = "pattern", value_name = "TEMPLATE")]
     checksum_patterns: Vec<String>,
-
-    /// The URL to download the file from
-    url: Url,
 }
 
 async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
@@ -186,6 +192,7 @@ fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
 }
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
+    let checksum_flag = &args.checksum_source;
     let url = args.url;
 
     // Initialise the logger:
@@ -218,7 +225,7 @@ async fn run() -> anyhow::Result<()> {
     // Create a stream of checksum downloads
     let checksums_patterns = CHECKSUMS_FILES
         .iter()
-        .chain(args.checksum_patterns.iter())
+        .chain(checksum_flag.checksum_patterns.iter())
         // It is safe to unwrap as the only possible error is catched by the validate_vars above
         .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
         // Build the URL where to get the checksums file.
