@@ -73,11 +73,21 @@ impl FromStr for Checksum {
             let mut parts = line.splitn(2, ' ');
             let (hash, filename) = parts
                 .next()
-                .zip(parts.next())
+                .zip(parts.next().map(|s| {
+                    // Binary files are prefixed by a `*`, which is not part of the filename
+                    // We remove this prefix from the extracted filename.
+                    if s.starts_with("*") {
+                        // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
+                        // and convert to string in the else
+                        s.replacen("*", "", 1)
+                    } else {
+                        s.to_string()
+                    }
+                }))
                 .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))?;
 
             algorithm = ChecksumAlgorithm::infer(hash);
-            let filename = handle_file_path(filename)?;
+            let filename = handle_file_path(filename.as_str())?;
             files.insert(filename.trim().to_owned(), hash.trim().to_owned());
         }
 

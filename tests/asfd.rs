@@ -338,3 +338,18 @@ fn file_with_path_and_valid_checksum() {
     assert!(is_file_pred.eval(Path::new("./the_file.txt")));
     let _ = std::fs::remove_file("./the_file.txt");
 }
+
+#[test]
+// Test successful download without any flag
+fn file_with_binary_indicator() {
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg(url("/checksums_with_binary_indicator/the_file.txt"));
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !"))
+        .stdout(contains("File\'s checksum is valid !"));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new("./the_file.txt")));
+    let _ = std::fs::remove_file("./the_file.txt");
+}
