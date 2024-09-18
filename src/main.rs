@@ -147,6 +147,43 @@ async fn main() {
     }
 }
 
+// Return a new URL with the path updated
+fn update_url_path(url: &Url, path: &str) -> Url {
+    let mut nurl = url.clone();
+    // The path is always considered from the root.
+    // We add the / here so the url is constructed correctly later on.
+    let root_path = if path.starts_with("/") {
+        path.to_string()
+    } else {
+        "/".to_string() + path
+    };
+    nurl.set_path(&root_path);
+    nurl
+}
+
+// Return the checksums file url that will be used when downloading the file at url
+// and using the location 'path' to find the checksums file.
+fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
+    // Try to parse the location 'path' pointing to the checksums file to determin
+    // if we got a URL or a path on the same server.
+    let url_result = Url::parse(path);
+    match url_result {
+        // If the url could be parsed, check the result's validity
+        Ok(u) => {
+            // If the scheme is http or https, we're good
+            if u.scheme() == "http" || u.scheme() == "https" {
+                Some(u)
+            }
+            // Otherwise we do not have a usable url
+            else {
+                log_warn("The location of the checksums file given was determined to be a URL, but the scheme is not http/https.");
+                None
+            }
+        }
+        // If no url could be parsed, use it as path on the server
+        Err(_) => Some(update_url_path(url, path)),
+    }
+}
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let url = args.url;
@@ -187,42 +224,12 @@ async fn run() -> anyhow::Result<()> {
         // Build the URL where to get the checksums file.
         .map(|path| {
             // Helper to build the replace the path of url by the path passed as argument
-            let update_url_path =  |url:&Url,path:&String| -> Url {
-                        let mut nurl = url.clone();
-                        // The path is always considered from the root.
-                        // We add the / here so the url is constructed correctly later on.
-                        let root_path =
-                            if path.starts_with("/") {
-                                path.to_string()
-                            }
-                            else {
-                                "/".to_string() + path
-                            };
-                        nurl.set_path(&root_path);
-                        nurl
-            };
             // Template is supposedly a full url
             if path.starts_with("http") {
-                let url_result = Url::parse(&path);
                 // Check if we parse a useable Url. Needed because
                 // "httplocalhost:9989/remote/checksums.txt" would be parsed successfully
                 // with scheme "httplocalhost"
-                let checksums_url =
-                    match url_result {
-                    // If the url could be parsed, check the result's validity
-                    Ok(u) => {
-                        // If the scheme is http or https, we're good
-                        if u.scheme() == "http" || u.scheme() == "https "{
-                            Some(u)
-                        }
-                        // Otherwise we do not have a usable url
-                        else { None }
-                    }
-                    // If no url could be parsed, use it as path on the server
-                    Err(_) => {
-                        Some(update_url_path(&url,&path))
-                    }
-                };
+                let checksums_url = handle_pattern(&url,&path);
 
                 // If we received a pattern starting with http, but the scheme parsed in not http
                 // or https, warn the user and use the pattern as path on the server of the file to
@@ -333,4 +340,48 @@ async fn run() -> anyhow::Result<()> {
         .context(format!("Unable to move the temporary file to {dest_file}"))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod helpers_tests {
+    use super::*;
+
+    #[test]
+    fn test_update_url_path() {
+        let new_path = "/asfd-checksums/v0.0.1";
+        let url1 = Url::parse("http://www.asfaload.com/blog").unwrap();
+        let url2 = update_url_path(&url1, new_path);
+        assert_eq!(url1.path(), "/blog");
+        assert_eq!(url2.path(), new_path);
+    }
+    #[test]
+    fn test_handle_pattern_https_same_server() {
+        let checksum_input = "https://www.example.com/public/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(checksum_input, o.as_ref().unwrap().to_string());
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
+    #[test]
+    fn test_handle_pattern_https_other_server() {
+        let checksum_input = "https://www.internal.example.com/checksums/public/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(checksum_input, o.as_ref().unwrap().to_string());
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
+    #[test]
+    fn test_handle_pattern_path() {
+        let checksum_input = "/checksums/public/extended/SHA256SUMS";
+        let file_url = Url::parse("https://www.example.com/public/my_file.txt").unwrap();
+        let o = handle_pattern(&file_url, checksum_input);
+        assert!(o.is_some());
+        assert_eq!(
+            "https://www.example.com/checksums/public/extended/SHA256SUMS",
+            o.as_ref().unwrap().to_string()
+        );
+        assert_eq!("https", o.as_ref().unwrap().scheme());
+    }
 }

@@ -51,6 +51,35 @@ impl Checksum {
     }
 }
 
+fn handle_file_path(filename: &str) -> Result<&str, ChecksumError> {
+    // Manipulate the filename to ignore its path as we do not use it anyway
+    // and it causes us trouble if left in
+    let filepath = Path::new(filename);
+    filepath
+        // Ignore path component of the filename
+        .file_name()
+        .and_then(|p| p.to_str())
+        .ok_or(ChecksumError::FileNamePart(filename.to_string()))
+}
+
+fn split_checksum_line(line: &str) -> Result<(&str, String), ChecksumError> {
+    let mut parts = line.splitn(2, ' ');
+    parts
+        .next()
+        .zip(parts.next().map(|s| {
+            // Binary files are prefixed by a `*`, which is not part of the filename
+            // We remove this prefix from the extracted filename.
+            if s.starts_with("*") {
+                // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
+                // and convert to string in the else
+                s.replacen("*", "", 1).trim().to_string()
+            } else {
+                s.trim().to_string()
+            }
+        }))
+        .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))
+}
+
 impl FromStr for Checksum {
     type Err = ChecksumError; // TODO: Implement proper error handling
 
@@ -59,22 +88,10 @@ impl FromStr for Checksum {
         let mut algorithm = None;
 
         for line in s.lines() {
-            let mut parts = line.splitn(2, ' ');
-            let (hash, filename) = parts
-                .next()
-                .zip(parts.next())
-                .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))?;
-
+            let (hash, filename) = split_checksum_line(line)?;
             algorithm = ChecksumAlgorithm::infer(hash);
-            // Manipulate the filename to ignore its path as we do not use it anyway
-            // and it causes us trouble if left in
-            let filepath = Path::new(filename);
-            let filename = filepath
-                // Ignore path component of the filename
-                .file_name()
-                .and_then(|p| p.to_str())
-                .ok_or(ChecksumError::FileNamePart(line.to_owned()))?;
-            files.insert(filename.trim().to_owned(), hash.trim().to_owned());
+            let filename = handle_file_path(filename.as_str())?;
+            files.insert(filename.to_owned(), hash.to_owned());
         }
 
         let algorithm = algorithm.ok_or(ChecksumError::UnknownChecksumAlgorithm)?;
@@ -106,5 +123,44 @@ impl ChecksumValidator {
         (hash.to_lowercase() == self.hash.to_lowercase())
             .then_some(())
             .ok_or(ChecksumError::InvalidChecksum(hash, self.hash))
+    }
+}
+
+#[cfg(test)]
+mod checksum_helpers_tests {
+    use super::*;
+
+    #[test]
+    // Do we remove all path components from filenames in the checksums file?
+    fn test_handle_file_path() {
+        let filename = "./my_file.txt";
+        let r = handle_file_path(filename);
+        assert!(r.is_ok());
+        assert_eq!("my_file.txt", r.unwrap());
+
+        let filename = "/path/to/file/my_file.txt";
+        let r = handle_file_path(filename);
+        assert!(r.is_ok());
+        assert_eq!("my_file.txt", r.unwrap());
+    }
+    #[test]
+    fn test_split_checkum_line() {
+        // Helper to validate line splitting
+        fn validate(checksum: &str, sep: &str, name: String) {
+            let line = String::from(checksum) + &String::from(sep) + &name;
+            let res = split_checksum_line(line.as_str());
+            assert!(res.is_ok());
+            assert_eq!((checksum, name), res.unwrap())
+        }
+
+        // Helper to validate split with separator
+        fn validate_with_separator(sep: &str) {
+            let checksum = "5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab";
+            let name = String::from("the_file.txt");
+            validate(checksum, sep, name);
+        }
+
+        validate_with_separator("  ");
+        validate_with_separator(" *");
     }
 }
