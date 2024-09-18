@@ -41,11 +41,15 @@ gh-download-artifacts:
 	@echo "-------------------------------------------------------------------------"
 
 ## RELEASE step 4: Create a release/ directory and generate files of a Github release in it.
+# Artifact downloads results in a hierarchy like 'asfd-x86_64-unknown-linux-musl/asfd'.
+# We create tgz files with these directories, but also make the asfd file itself available
+# under the same name as the directory.
 gh-prepare-release:
 	mkdir release; \
   for dir in asfd-*; do \
 		cp LICENSE $$dir/; \
 		if [[ ! $$dir =~ windows ]]; then \
+			cp $$dir/asfd release/$$dir; \
 			chmod +x $$dir/asfd; \
 			tar zcvf release/$$dir.tar.gz $$dir; \
 		else \
