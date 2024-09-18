@@ -62,6 +62,24 @@ fn handle_file_path(filename: &str) -> Result<&str, ChecksumError> {
         .ok_or(ChecksumError::FileNamePart(filename.to_string()))
 }
 
+fn split_checksum_line(line: &str) -> Result<(&str, String), ChecksumError> {
+    let mut parts = line.splitn(2, ' ');
+    parts
+        .next()
+        .zip(parts.next().map(|s| {
+            // Binary files are prefixed by a `*`, which is not part of the filename
+            // We remove this prefix from the extracted filename.
+            if s.starts_with("*") {
+                // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
+                // and convert to string in the else
+                s.replacen("*", "", 1)
+            } else {
+                s.to_string()
+            }
+        }))
+        .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))
+}
+
 impl FromStr for Checksum {
     type Err = ChecksumError; // TODO: Implement proper error handling
 
@@ -70,22 +88,7 @@ impl FromStr for Checksum {
         let mut algorithm = None;
 
         for line in s.lines() {
-            let mut parts = line.splitn(2, ' ');
-            let (hash, filename) = parts
-                .next()
-                .zip(parts.next().map(|s| {
-                    // Binary files are prefixed by a `*`, which is not part of the filename
-                    // We remove this prefix from the extracted filename.
-                    if s.starts_with("*") {
-                        // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
-                        // and convert to string in the else
-                        s.replacen("*", "", 1)
-                    } else {
-                        s.to_string()
-                    }
-                }))
-                .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))?;
-
+            let (hash, filename) = split_checksum_line(line)?;
             algorithm = ChecksumAlgorithm::infer(hash);
             let filename = handle_file_path(filename.as_str())?;
             files.insert(filename.trim().to_owned(), hash.trim().to_owned());
