@@ -72,9 +72,9 @@ fn split_checksum_line(line: &str) -> Result<(&str, String), ChecksumError> {
             if s.starts_with("*") {
                 // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
                 // and convert to string in the else
-                s.replacen("*", "", 1)
+                s.replacen("*", "", 1).trim().to_string()
             } else {
-                s.to_string()
+                s.trim().to_string()
             }
         }))
         .ok_or(ChecksumError::ChecksumFormat(line.to_owned()))
@@ -91,7 +91,7 @@ impl FromStr for Checksum {
             let (hash, filename) = split_checksum_line(line)?;
             algorithm = ChecksumAlgorithm::infer(hash);
             let filename = handle_file_path(filename.as_str())?;
-            files.insert(filename.trim().to_owned(), hash.trim().to_owned());
+            files.insert(filename.to_owned(), hash.to_owned());
         }
 
         let algorithm = algorithm.ok_or(ChecksumError::UnknownChecksumAlgorithm)?;
@@ -142,5 +142,25 @@ mod checksum_helpers_tests {
         let r = handle_file_path(filename);
         assert!(r.is_ok());
         assert_eq!("my_file.txt", r.unwrap());
+    }
+    #[test]
+    fn test_split_checkum_line() {
+        // Helper to validate line splitting
+        fn validate(checksum: &str, sep: &str, name: String) {
+            let line = String::from(checksum) + &String::from(sep) + &name;
+            let res = split_checksum_line(line.as_str());
+            assert!(res.is_ok());
+            assert_eq!((checksum, name), res.unwrap())
+        }
+
+        // Helper to validate split with separator
+        fn validate_with_separator(sep: &str) {
+            let checksum = "5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab";
+            let name = String::from("the_file.txt");
+            validate(checksum, sep, name);
+        }
+
+        validate_with_separator("  ");
+        validate_with_separator(" *");
     }
 }
