@@ -58,10 +58,10 @@ fi
 
 You can safely download and install `asfd` in your linux containers by adding this snippet to your `Dockerfile` (you can choose the version to install by modifying the value of `asfd_version` on the first line):
 ```
-RUN bash -c 'asfd_version=v0.0.1 && \
-    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl.tar.gz && \
+RUN bash -c 'asfd_version=v0.1.0 && \
+    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl && \
     sha256sum --ignore-missing -c <(curl --silent  https://asfaload.com/asfd-checksums/${asfd_version}) && \
-    tar zxvf asfd-x86_64-unknown-linux-musl.tar.gz -C /usr/bin --wildcards "*/asfd" --strip-components=1'
+    mv asfd-x86_64-unknown-linux-musl /usr/bin/asfd && chmod +x /usr/bin/asfd'
 ```
 
 This will download `asfd` from Github, validate the file's checksum against the checksums published on [asfaload.com](http://www.asfaload.com/asfd-checksums) and if successful, place the `asfd` binary in the container's `/usr/bin` directory.
@@ -75,10 +75,10 @@ Example: a full `Dockerfile` letting you run `asfd` in a container
 FROM ubuntu
 
 RUN apt-get update && apt-get install -y curl
-RUN bash -c 'asfd_version=v0.0.1 && \
-    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl.tar.gz && \
+RUN bash -c 'asfd_version=v0.1.0 && \
+    curl --silent  -L -O https://github.com/asfaload/asfd/releases/download/${asfd_version}/asfd-x86_64-unknown-linux-musl && \
     sha256sum --ignore-missing -c <(curl --silent  https://asfaload.com/asfd-checksums/${asfd_version}) && \
-    tar zxvf asfd-x86_64-unknown-linux-musl.tar.gz -C /usr/bin --wildcards "*/asfd" --strip-components=1'
+    mv asfd-x86_64-unknown-linux-musl /usr/bin/asfd && chmod +x /usr/bin/asfd'
 
 ENTRYPOINT [ "/usr/bin/asfd" ]
 ```
