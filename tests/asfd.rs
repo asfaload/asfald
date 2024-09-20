@@ -440,3 +440,24 @@ fn cli_with_hash_flag() {
     // Check no file was downloaded
     assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
 }
+
+#[test]
+// Test without checksums file
+fn cli_with_hash_and_p_flags() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+
+    // Test with the right hash value
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab");
+    cmd.arg("-p");
+    cmd.arg("http://example.com/checksum.txt");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    cmd.assert().failure().stderr(contains(
+        "error: the argument \'--hash <HASH>\' cannot be used with \'--pattern <TEMPLATE>\'",
+    ));
+}
