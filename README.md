@@ -122,3 +122,28 @@ and then run `cargo build` (this uses the `dev` [profile](https://doc.rust-lang.
 ## Static linking on Linux
 
 We provide a convenient Dockerfile to build a static binary. You can just run `make linux-static` and it will build a Docker image named `asfd-build` based on the official Rust Alpine container image. It will then use that image to build a static binary. You can choose the build [profile](https://doc.rust-lang.org/cargo/reference/profiles.html) with the `PROFILE` variable, eg `PROFILE=release make linux-static` and the binary will then be found at `target/debug/asfd`.
+
+# Contributing
+
+We welcome contributions of all kinds! See our [blog port](https://www.asfaload.com/blog/handling-outside-contributions/) on the subject.
+
+To ensure code quality and consistency, this project uses [pre-commit](https://pre-commit.com/) hooks to automatically check and format code before it's committed.
+
+To install pre-commit:
+
+```console
+$ pip install pre-commit
+```
+
+To install the necessary pre-commit hooks for this repository, run the following commands:
+
+```console
+$ pre-commit install
+$ pre-commit install --hook-type commit-msg
+```
+
+If you'd like to run the pre-commit checks manually before committing, use:
+
+```console
+$ pre-commit run -a
+```
