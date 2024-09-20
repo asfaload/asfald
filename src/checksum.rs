@@ -69,10 +69,10 @@ fn split_checksum_line(line: &str) -> Result<(&str, String), ChecksumError> {
         .zip(parts.next().map(|s| {
             // Binary files are prefixed by a `*`, which is not part of the filename
             // We remove this prefix from the extracted filename.
-            if s.starts_with("*") {
+            if s.starts_with('*') {
                 // Cannot return s, the local variable of type &str (ERR E0515), so we return s string here
                 // and convert to string in the else
-                s.replacen("*", "", 1).trim().to_string()
+                s.replacen('*', "", 1).trim().to_string()
             } else {
                 s.trim().to_string()
             }

@@ -152,7 +152,7 @@ fn update_url_path(url: &Url, path: &str) -> Url {
     let mut nurl = url.clone();
     // The path is always considered from the root.
     // We add the / here so the url is constructed correctly later on.
-    let root_path = if path.starts_with("/") {
+    let root_path = if path.starts_with('/') {
         path.to_string()
     } else {
         "/".to_string() + path
