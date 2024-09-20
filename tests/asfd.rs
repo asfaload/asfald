@@ -353,3 +353,111 @@ fn file_with_binary_indicator() {
     assert!(is_file_pred.eval(Path::new("./the_file.txt")));
     let _ = std::fs::remove_file("./the_file.txt");
 }
+
+#[test]
+// Test without checksums file
+fn cli_with_hash_flag() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+
+    // Test with the right hash value
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Using hash passed as argument"))
+        .stdout(contains("File\'s checksum is valid !"))
+        .stderr(contains("Unable to fetch checksum file").not());
+
+    let is_file_pred = is_file();
+    // Check file was downloaded
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_file(Path::new(&dir.join("the_file.txt")));
+
+    // Test with a wrong hash value on the CLI: should be rejected
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("000000a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd46000000");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .failure()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Using hash passed as argument"))
+        .stdout(contains("File\'s checksum is invalid !"))
+        .stderr(contains("Unable to fetch checksum file").not());
+
+    // Check no file was downloaded
+    assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+
+    // Test with a checksum file on the server with the wrong value, but pass the right value on the
+    // CLI
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg(url("/invalid_checksum/the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab");
+    cmd.assert()
+        .success()
+        .stdout(contains("Using hash passed as argument"))
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("File\'s checksum is valid !"));
+    // Check file was downloaded
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_file(Path::new(&dir.join("the_file.txt")));
+    //
+    // Test with a wrong hash value on the CLI while the server has a checksums file
+    // with the right hash. This should be rejected.
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("000000a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd46000000");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/valid/the_file.txt"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .failure()
+        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Using hash passed as argument"))
+        .stdout(contains("File\'s checksum is invalid !"))
+        .stderr(contains("Unable to fetch checksum file").not());
+
+    // Check no file was downloaded
+    assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+}
+
+#[test]
+// Test without checksums file
+fn cli_with_hash_and_p_flags() {
+    // Create out dedicated directory
+    let dir: PathBuf = testdir!();
+
+    // Test with the right hash value
+    let mut cmd = Command::new("target/debug/asfd");
+    cmd.arg("-o");
+    cmd.arg(dir.join("the_file.txt"));
+    cmd.arg("--hash");
+    cmd.arg("5551b7a5370158efdf4158456feb85f310b3233bb7e71253e3b020fd465027ab");
+    cmd.arg("-p");
+    cmd.arg("http://example.com/checksum.txt");
+    // Download the file to our dedicated directory
+    cmd.arg(url("/no_checksums_file/the_file.txt"));
+    cmd.assert().failure().stderr(contains(
+        "error: the argument \'--hash <HASH>\' cannot be used with \'--pattern <TEMPLATE>\'",
+    ));
+}

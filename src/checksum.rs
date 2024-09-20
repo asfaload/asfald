@@ -49,6 +49,15 @@ impl Checksum {
             .get(file)
             .map(|hash| ChecksumValidator::new(self.algorithm, hash))
     }
+    // Return a Checksum instance using the filename and hash string passed as argument
+    // Useful when using hash value passed as argument to the CLI
+    pub fn from_hash(filename: &str, hash: &str) -> Result<Checksum, ChecksumError> {
+        let mut files = HashMap::new();
+        let algorithm =
+            ChecksumAlgorithm::infer(hash).ok_or(ChecksumError::UnknownChecksumAlgorithm)?;
+        files.insert(filename.to_owned(), hash.to_owned());
+        Ok(Checksum { algorithm, files })
+    }
 }
 
 fn handle_file_path(filename: &str) -> Result<&str, ChecksumError> {
@@ -89,6 +98,8 @@ impl FromStr for Checksum {
 
         for line in s.lines() {
             let (hash, filename) = split_checksum_line(line)?;
+            // FIXME: this seems to infer the algorithm for each line, and below we only use the
+            // last value computed
             algorithm = ChecksumAlgorithm::infer(hash);
             let filename = handle_file_path(filename.as_str())?;
             files.insert(filename.to_owned(), hash.to_owned());
