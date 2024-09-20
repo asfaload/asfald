@@ -1,0 +1,21 @@
+name: Release Please
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: write
+      packages: write
+      pull-requests: write
+
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          release-type: rust
