@@ -2,9 +2,12 @@
 
 `asfd` is a command line downloader which validates the integrity of the downloaded file against a checksums file published alongside it.
 
+Note that **using a checksums file stored on the same server as the downloaded file has no security benefit**, it only ensure the file you have wasn't corrupted in transit.
+To increase security, the checksums file has to be downloaded from another server. For example, when downloading from a mirror, you can use the checksums file from the origin server. For other security-enhancing possibilities offered by asfd's checksums checking features, check [this blog post](https://www.asfaload.com/blog/increasing-security-checking-integrity/).
+
 By default it looks for a checksums file alongside the file to be downloaded. The names it is looking for are `checksum.txt`, `checksums.txt`, `CHECKSUMS256.txt`, `SHASUMS256`, `SHASUMS256.txt`. It also checks for checksums in a file named identically to the file to be downloaded, but with extension `.sha256sum` (the [neovim releases](https://github.com/neovim/neovim/releases) convention).
 
-If the checksum file to be used is not located alongside the file to be downloaded, you can specify custom locations with the `-p` flag. The custom location you provide can even be on another server, allowing you to maintain your own checksums files internally. Call `asfd` with the `--help` flag to get more info and an example.
+If the checksum file to be used is not located alongside the file to be downloaded, you can specify custom locations with the `-p` flag. The custom location you provide can be on another server, allowing you to maintain your own checksums files internally. Call `asfd` with the `--help` flag to get more info and an example.
 
 Publishing a checksums file alongisde a file proposed for download is done by numerous projects in their releases (see for example [Lazygit](https://github.com/jesseduffield/lazydocker), [mise](https://github.com/jdx/mise), [watchexec](https://github.com/watchexec/watchexec), [Github's CLI](https://github.com/cli/cli/), [act](https://github.com/nektos/act/releases/tag/v0.2.66)(run Github Actions locally),[neovim](https://github.com/neovim/neovim), ...).
 
