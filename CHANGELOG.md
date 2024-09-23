@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/asfaload/asfd/compare/v0.1.0...v0.2.0) (2024-09-23)
+
+
+### Features
+
+* accept hash value on command line ([4093382](https://github.com/asfaload/asfd/commit/40933825af60aef62cabe5f08be14a50e765d54b))
+* add pre-commit support ([53b3bcf](https://github.com/asfaload/asfd/commit/53b3bcf6c7ca2c58ac2b2c1706d743a24943a1a4))
+
 ## [Unreleased]
 
 ### Added
