@@ -4,7 +4,7 @@ name: Build executables
 on: workflow_dispatch
 
 env:
-  CRATE_NAME: asfd
+  CRATE_NAME: asfald
   GITHUB_TOKEN: ${{ github.token }}
   RUST_BACKTRACE: 1
 
@@ -80,9 +80,9 @@ jobs:
           args: "--locked --release"
           strip: true
 
-      - run: ls target/${{matrix.platform.target}}/release/asfd${{matrix.platform.extension}}
+      - run: ls target/${{matrix.platform.target}}/release/asfald${{matrix.platform.extension}}
       - name: Make artifact available
         uses: actions/upload-artifact@v4
         with:
-          name: asfd-${{matrix.platform.target}}
-          path: target/${{matrix.platform.target}}/release/asfd${{matrix.platform.extension}}
+          name: asfald-${{matrix.platform.target}}
+          path: target/${{matrix.platform.target}}/release/asfald${{matrix.platform.extension}}

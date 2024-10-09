@@ -22,7 +22,7 @@ fn snd_url(path: &str) -> String {
 #[test]
 // Test successful download without any flag
 fn file_with_valid_checksum() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/valid/the_file.txt"));
     // spawn will display the output of the command
     //cmd.spawn().unwrap();
@@ -41,7 +41,7 @@ fn file_with_valid_checksum() {
 fn file_with_valid_checksum_o() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     // Download the file to our dedicated directory
     cmd.arg(dir.join("the_local_file.txt"));
@@ -65,7 +65,7 @@ fn file_with_valid_checksum_o() {
 fn file_with_valid_checksum_p_url() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     // Download the file to our dedicated directory
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
@@ -90,7 +90,7 @@ fn file_with_valid_checksum_p_url() {
 fn file_with_valid_checksum_p_fullpath() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     // Download the file to our dedicated directory
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
@@ -115,7 +115,7 @@ fn file_with_valid_checksum_p_fullpath() {
 fn file_with_valid_checksum_p_file_pattern() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     // Download the file to our dedicated directory
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
@@ -140,7 +140,7 @@ fn file_with_valid_checksum_p_file_pattern() {
 fn file_with_valid_checksum_p_path_pattern() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     // Download the file to our dedicated directory
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
@@ -167,7 +167,7 @@ fn file_with_valid_checksum_p_path_pattern() {
 fn file_p_pattern_with_http() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     // Download the file to our dedicated directory
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
@@ -192,7 +192,7 @@ fn file_p_pattern_with_http() {
 fn file_with_valid_checksum_q() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("-q");
@@ -212,7 +212,7 @@ fn file_with_valid_checksum_q() {
 fn file_without_checksums_file() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     // Download the file to our dedicated directory
@@ -235,7 +235,7 @@ fn file_without_checksums_file() {
 fn file_without_checksums_file_but_force_absent() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("-f");
@@ -262,7 +262,7 @@ fn file_without_checksums_file_but_force_absent() {
 fn file_without_checksums_file_but_force_invalid() {
     // Create out dedicated directory
     let dir: PathBuf = testdir!();
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("-F");
@@ -287,7 +287,7 @@ fn file_without_checksums_file_but_force_invalid() {
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
 fn file_with_invalid_checksum() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.assert()
         .failure()
@@ -299,7 +299,7 @@ fn file_with_invalid_checksum() {
 // File downloaded is present in checksums file, but the checksum is different
 // With --force-absent: should validate the checksum if it is present
 fn file_with_invalid_checksum_force_absent() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.arg("-f");
     cmd.assert()
@@ -312,7 +312,7 @@ fn file_with_invalid_checksum_force_absent() {
 // File downloaded is present in checksums file, but the checksum is different
 // With --force-absent: should validate the checksum if it is present
 fn file_with_invalid_checksum_force_invalid() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.arg("-F");
     cmd.assert()
@@ -325,7 +325,7 @@ fn file_with_invalid_checksum_force_invalid() {
 #[test]
 // Test successful download without any flag
 fn file_with_path_and_valid_checksum() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/checksums_with_path/the_file.txt"));
     // spawn will display the output of the command
     //cmd.spawn().unwrap();
@@ -342,7 +342,7 @@ fn file_with_path_and_valid_checksum() {
 #[test]
 // Test successful download without any flag
 fn file_with_binary_indicator() {
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg(url("/checksums_with_binary_indicator/the_file.txt"));
     cmd.assert()
         .success()
@@ -361,7 +361,7 @@ fn cli_with_hash_flag() {
     let dir: PathBuf = testdir!();
 
     // Test with the right hash value
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("--hash");
@@ -383,7 +383,7 @@ fn cli_with_hash_flag() {
     let _ = std::fs::remove_file(Path::new(&dir.join("the_file.txt")));
 
     // Test with a wrong hash value on the CLI: should be rejected
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("--hash");
@@ -404,7 +404,7 @@ fn cli_with_hash_flag() {
 
     // Test with a checksum file on the server with the wrong value, but pass the right value on the
     // CLI
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg(url("/invalid_checksum/the_file.txt"));
@@ -421,7 +421,7 @@ fn cli_with_hash_flag() {
     //
     // Test with a wrong hash value on the CLI while the server has a checksums file
     // with the right hash. This should be rejected.
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("--hash");
@@ -448,7 +448,7 @@ fn cli_with_hash_and_p_flags() {
     let dir: PathBuf = testdir!();
 
     // Test with the right hash value
-    let mut cmd = Command::new("target/debug/asfd");
+    let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-o");
     cmd.arg(dir.join("the_file.txt"));
     cmd.arg("--hash");

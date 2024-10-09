@@ -65,14 +65,14 @@ using predefined variables. These variables are:
 
 Searching for Checksums ending with .checksum:
 
- $ asfd -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
+ $ asfald -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
 
 This will look for a possible checksum at the following URL:
 https://github.com/user/repo/releases/download/v0.0.1/mybinary.checksum
 
 Specifying a full checksum URL:
 
- $ asfd -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
+ $ asfald -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
 
 {}
 The -H/--hash <HASH> flags allows to pass the hash value to use when validating the downloaded file.
@@ -80,8 +80,8 @@ Doing this will allow you to detect when a file you download regularly was modif
 is especially useful in Dockerfiles.
 When this flag is passed, no checksums file will be used.
 
- $ asfd --hash 87b5fbf82d9258782ffbd141ffbeab954af3ce6ff7a1ad336c70196f40ac233c \\
-        https://github.com/asfaload/asfd/releases/download/v0.1.0/asfd-x86_64-unknown-linux-musl
+ $ asfald --hash 87b5fbf82d9258782ffbd141ffbeab954af3ce6ff7a1ad336c70196f40ac233c \\
+        https://github.com/asfaload/asfald/releases/download/v0.1.0/asfald-x86_64-unknown-linux-musl
 ", style("Examples:").bold().underlined(), style("Custom checksums file").underlined(), style("Literal hash value").underlined())
 });
 
@@ -103,7 +103,7 @@ fn log_warn(msg: &str) {
 
 #[derive(Parser)]
 #[command(
-    name = "asfd",
+    name = "asfald",
     about = "Download a file from a URL and check its checksum",
     after_help = EXAMPLE_HELP.as_str()
 )]
@@ -390,7 +390,7 @@ mod helpers_tests {
 
     #[test]
     fn test_update_url_path() {
-        let new_path = "/asfd-checksums/v0.0.1";
+        let new_path = "/asfald-checksums/v0.0.1";
         let url1 = Url::parse("http://www.asfaload.com/blog").unwrap();
         let url2 = update_url_path(&url1, new_path);
         assert_eq!(url1.path(), "/blog");
