@@ -7,6 +7,7 @@ use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, warn, LevelFilter};
 use once_cell::sync::Lazy;
+use rand::seq::SliceRandom;
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -36,7 +37,19 @@ static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
         // TODO add more patterns
     ]
 });
-
+struct AsfaloadHost<'a> {
+    // Host on which our checksums are available, eg asfaload.github.io
+    host: &'a str,
+    // The prefix to add to the path to the checksums file compared to the original path, eg
+    // /checksums
+    prefix: &'a str,
+}
+static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost>> = Lazy::new(|| {
+    vec![AsfaloadHost {
+        host: "asfaload.github.io",
+        prefix: "/checksums",
+    }]
+});
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
 static INFO: Emoji<'_, '_> = Emoji("ℹ️", "");
@@ -186,13 +199,14 @@ fn update_url_path(url: &Url, path: &str) -> Url {
     nurl.set_path(&root_path);
     nurl
 }
-
 // Return a new URL with the path updated
 fn update_url_asfaload_host(url: &Url) -> Url {
+    let chosen_host = ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap();
     let mut nurl = url.clone();
-    let npath = "/checksums/".to_string() + &url.host().unwrap().to_string() + url.path();
+    let npath =
+        chosen_host.prefix.to_string() + "/" + &url.host().unwrap().to_string() + url.path();
     nurl.set_path(&npath);
-    let host_result = nurl.set_host(Some("asfaload.github.io"));
+    let host_result = nurl.set_host(Some(chosen_host.host));
     host_result
         .map(|_| -> Url { nurl })
         .context("Error setting asfaload host in checksums url")
