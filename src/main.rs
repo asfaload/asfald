@@ -42,13 +42,19 @@ struct AsfaloadHost<'a> {
     host: &'a str,
     // The prefix to add to the path to the checksums file compared to the original path, eg
     // /checksums
-    prefix: &'a str,
+    prefix: Option<&'a str>,
 }
 static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost>> = Lazy::new(|| {
-    vec![AsfaloadHost {
-        host: "asfaload.github.io",
-        prefix: "/checksums",
-    }]
+    vec![
+        AsfaloadHost {
+            host: "asfaload.github.io",
+            prefix: Some("/checksums"),
+        },
+        AsfaloadHost {
+            host: "cf.checksums.asfaload.com",
+            prefix: None,
+        },
+    ]
 });
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
@@ -207,8 +213,12 @@ fn update_url_path(url: &Url, path: &str) -> Url {
 fn update_url_asfaload_host(url: &Url) -> Url {
     let chosen_host = ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap();
     let mut nurl = url.clone();
-    let npath =
-        chosen_host.prefix.to_string() + "/" + &url.host().unwrap().to_string() + url.path();
+    let npath = chosen_host
+        .prefix
+        .map(|p| p.to_string() + "/")
+        .unwrap_or_default()
+        + &url.host().unwrap().to_string()
+        + url.path();
     nurl.set_path(&npath);
     let host_result = nurl.set_host(Some(chosen_host.host));
     host_result
