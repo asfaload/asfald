@@ -139,6 +139,9 @@ struct ChecksumSource {
     /// Specify the checksum value for the downloaded file
     #[arg(short = 'H', long = "hash", value_name = "HASH")]
     hash_value: Option<String>,
+    /// Specify the checksum value for the downloaded file
+    #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
+    asfaload_host: bool,
 }
 
 async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
@@ -184,6 +187,17 @@ fn update_url_path(url: &Url, path: &str) -> Url {
     nurl
 }
 
+// Return a new URL with the path updated
+fn update_url_asfaload_host(url: &Url) -> Url {
+    let mut nurl = url.clone();
+    let npath = "/checksums/".to_string() + &url.host().unwrap().to_string() + url.path();
+    nurl.set_path(&npath);
+    let host_result = nurl.set_host(Some("asfaload.github.io"));
+    host_result
+        .map(|_| -> Url { nurl })
+        .context("Error setting asfaload host in checksums url")
+        .unwrap()
+}
 // Return the checksums file url that will be used when downloading the file at url
 // and using the location 'path' to find the checksums file.
 fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
@@ -284,8 +298,12 @@ async fn run() -> anyhow::Result<()> {
                     if pattern.starts_with("http") {
                         use_pattern_as_url_if_valid_scheme(&url, &pattern)
                     }
+                    // Look on our checksums mirrors
+                    else if checksum_flag.asfaload_host {
+                        let url = update_url_path(&url, &pattern);
+                        update_url_asfaload_host(&url)
                     // Template is a path, look on same server as file
-                    else {
+                    } else {
                         update_url_path(&url, &pattern)
                     }
                 })
