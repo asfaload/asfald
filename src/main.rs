@@ -47,8 +47,8 @@ struct AsfaloadHost<'a> {
 static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
-            host: "asfaload.github.io",
-            prefix: Some("/checksums"),
+            host: "gh.checksums.asfaload.com",
+            prefix: None,
         },
         AsfaloadHost {
             host: "cf.checksums.asfaload.com",
