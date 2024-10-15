@@ -161,7 +161,10 @@ async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
     reqwest::get(url).await?.error_for_status()
 }
 
-async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidator> {
+// Returns a result of tuple (validator,url), so the url can be reported to the user
+async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<(ChecksumValidator, Url)> {
+    // Clone url as it is moved by fetch_url
+    let returned_url = url.clone();
     let data = fetch_url(url)
         .await
         .context("Unable to fetch checksum file")?
@@ -173,7 +176,8 @@ async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidato
     match data.parse::<Checksum>() {
         Ok(checksum) => checksum
             .into_validator(file)
-            .context(format!("Unable to find '{file}' in checksum")),
+            .context(format!("Unable to find '{file}' in checksum"))
+            .map(|validator| (validator, returned_url)),
         Err(e) => anyhow::bail!("Failed to parse checksum file: {e:?}"),
     }
 }
@@ -325,8 +329,11 @@ async fn run() -> anyhow::Result<()> {
 
             // Select the first checksum file that is found
             match select_ok(checksums_patterns).await {
-                Ok((checksum, _)) => {
-                    log_step(FOUND, "Checksum file found !");
+                Ok(((checksum, url), _)) => {
+                    log_step(
+                        FOUND,
+                        format!("Checksum file found at {}!", url.host().unwrap()).as_str(),
+                    );
                     Some(checksum)
                 }
                 Err(e) => {
