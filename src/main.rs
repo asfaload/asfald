@@ -214,10 +214,15 @@ fn update_url_asfaload_host(url: &Url) -> Url {
     let chosen_host = ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap();
     let mut nurl = url.clone();
     let npath = chosen_host
+        // Tke the mirror's prefix
         .prefix
+        // Put the `/` in front of it
         .map(|p| p.to_string() + "/")
+        // And get it out of the option, or the empty string
         .unwrap_or_default()
+        // Put the host in the path
         + &url.host().unwrap().to_string()
+        // Followed by the full original path
         + url.path();
     nurl.set_path(&npath);
     let host_result = nurl.set_host(Some(chosen_host.host));
