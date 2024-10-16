@@ -44,7 +44,7 @@ struct AsfaloadHost<'a> {
     // /checksums
     prefix: Option<&'a str>,
 }
-static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost>> = Lazy::new(|| {
+static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
             host: "gh.checksums.asfaload.com",
