@@ -28,7 +28,7 @@ fn file_with_valid_checksum() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -50,7 +50,7 @@ fn file_with_valid_checksum_o() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -77,7 +77,7 @@ fn file_with_valid_checksum_p_url() {
 
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -102,7 +102,7 @@ fn file_with_valid_checksum_p_fullpath() {
 
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -127,7 +127,7 @@ fn file_with_valid_checksum_p_file_pattern() {
 
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -154,7 +154,7 @@ fn file_with_valid_checksum_p_path_pattern() {
 
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -179,7 +179,7 @@ fn file_p_pattern_with_http() {
 
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -221,7 +221,7 @@ fn file_without_checksums_file() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .failure()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("File\'s checksum is valid !").not())
         .stderr(contains("Unable to fetch checksum file"));
 
@@ -245,7 +245,7 @@ fn file_without_checksums_file_but_force_absent() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("File\'s checksum is valid !").not())
         .stdout(contains(
             "Checksum file not found, but continuing due to --force-absent or --force-invalid flag",
@@ -272,7 +272,7 @@ fn file_without_checksums_file_but_force_invalid() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("File\'s checksum is valid !").not())
         .stdout(contains(
             "Checksum file not found, but continuing due to --force-absent or --force-invalid flag",
@@ -291,7 +291,7 @@ fn file_with_invalid_checksum() {
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.assert()
         .failure()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is invalid !"));
 }
 
@@ -304,7 +304,7 @@ fn file_with_invalid_checksum_force_absent() {
     cmd.arg("-f");
     cmd.assert()
         .failure()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is invalid !"));
 }
 
@@ -317,7 +317,7 @@ fn file_with_invalid_checksum_force_invalid() {
     cmd.arg("-F");
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is invalid !"))
         .stdout(contains("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️"));
 }
@@ -331,7 +331,7 @@ fn file_with_path_and_valid_checksum() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -346,7 +346,7 @@ fn file_with_binary_indicator() {
     cmd.arg(url("/checksums_with_binary_indicator/the_file.txt"));
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !"))
+        .stdout(contains("Checksum file found at localhost!"))
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
@@ -372,7 +372,7 @@ fn cli_with_hash_flag() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .success()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("Using hash passed as argument"))
         .stdout(contains("File\'s checksum is valid !"))
         .stderr(contains("Unable to fetch checksum file").not());
@@ -394,7 +394,7 @@ fn cli_with_hash_flag() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .failure()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("Using hash passed as argument"))
         .stdout(contains("File\'s checksum is invalid !"))
         .stderr(contains("Unable to fetch checksum file").not());
@@ -413,7 +413,7 @@ fn cli_with_hash_flag() {
     cmd.assert()
         .success()
         .stdout(contains("Using hash passed as argument"))
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("File\'s checksum is valid !"));
     // Check file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
@@ -432,7 +432,7 @@ fn cli_with_hash_flag() {
     //cmd.spawn().unwrap();
     cmd.assert()
         .failure()
-        .stdout(contains("Checksum file found !").not())
+        .stdout(contains("Checksum file found at localhost!").not())
         .stdout(contains("Using hash passed as argument"))
         .stdout(contains("File\'s checksum is invalid !"))
         .stderr(contains("Unable to fetch checksum file").not());
