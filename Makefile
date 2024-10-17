@@ -1,11 +1,11 @@
 .DEFAULT_GOAL := help
 SHELL:=/bin/bash
 
-## Build static binary at target/debug/asfd, requires docker.
+## Build static binary at target/debug/asfald, requires docker.
 ## Choose profile with variable PROFILE (dev, release,test,bench). Default = dev
 linux-static:
-	docker build -t asfd-build .
-	docker run -v $$PWD:/asfd -w /asfd -u "$$(id -u):$$(id -g)" -it --rm asfd-build ash -c "OPENSSL_STATIC=1  OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include cargo build $${PROFILE:+--$${PROFILE}}"
+	docker build -t asfald-build .
+	docker run -v $$PWD:/asfald -w /asfald -u "$$(id -u):$$(id -g)" -it --rm asfald-build ash -c "OPENSSL_STATIC=1  OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include cargo build $${PROFILE:+--$${PROFILE}}"
 
 ## Perform validations of the code and compilation (warnings are errors).
 check:
@@ -41,16 +41,16 @@ gh-download-artifacts:
 	@echo "-------------------------------------------------------------------------"
 
 ## RELEASE step 4: Create a release/ directory and generate files of a Github release in it.
-# Artifact downloads results in a hierarchy like 'asfd-x86_64-unknown-linux-musl/asfd'.
-# We create tgz files with these directories, but also make the asfd file itself available
+# Artifact downloads results in a hierarchy like 'asfald-x86_64-unknown-linux-musl/asfald'.
+# We create tgz files with these directories, but also make the asfald file itself available
 # under the same name as the directory.
 gh-prepare-release:
 	mkdir release; \
-  for dir in asfd-*; do \
+  for dir in asfald-*; do \
 		cp LICENSE $$dir/; \
 		if [[ ! $$dir =~ windows ]]; then \
-			cp $$dir/asfd release/$$dir; \
-			chmod +x $$dir/asfd; \
+			cp $$dir/asfald release/$$dir; \
+			chmod +x $$dir/asfald; \
 			tar zcvf release/$$dir.tar.gz $$dir; \
 		else \
 			zip release/$$dir.zip $$dir;\

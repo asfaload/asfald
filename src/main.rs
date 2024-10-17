@@ -7,6 +7,7 @@ use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, warn, LevelFilter};
 use once_cell::sync::Lazy;
+use rand::seq::SliceRandom;
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -36,7 +37,25 @@ static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
         // TODO add more patterns
     ]
 });
-
+struct AsfaloadHost<'a> {
+    // Host on which our checksums are available, eg asfaload.github.io
+    host: &'a str,
+    // The prefix to add to the path to the checksums file compared to the original path, eg
+    // /checksums
+    prefix: Option<&'a str>,
+}
+static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
+    vec![
+        AsfaloadHost {
+            host: "gh.checksums.asfaload.com",
+            prefix: None,
+        },
+        AsfaloadHost {
+            host: "cf.checksums.asfaload.com",
+            prefix: None,
+        },
+    ]
+});
 static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
 static FOUND: Emoji<'_, '_> = Emoji("✨", "");
 static INFO: Emoji<'_, '_> = Emoji("ℹ️", "");
@@ -65,14 +84,14 @@ using predefined variables. These variables are:
 
 Searching for Checksums ending with .checksum:
 
- $ asfd -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
+ $ asfald -p \"\\${{fullpath}}.checksum\" https://github.com/user/repo/releases/download/v0.0.1/mybinary
 
 This will look for a possible checksum at the following URL:
 https://github.com/user/repo/releases/download/v0.0.1/mybinary.checksum
 
 Specifying a full checksum URL:
 
- $ asfd -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
+ $ asfald -p https://another.com/CHECKSUM https://github.com/user/repo/releases/download/v0.0.1/mybinary
 
 {}
 The -H/--hash <HASH> flags allows to pass the hash value to use when validating the downloaded file.
@@ -80,8 +99,8 @@ Doing this will allow you to detect when a file you download regularly was modif
 is especially useful in Dockerfiles.
 When this flag is passed, no checksums file will be used.
 
- $ asfd --hash 87b5fbf82d9258782ffbd141ffbeab954af3ce6ff7a1ad336c70196f40ac233c \\
-        https://github.com/asfaload/asfd/releases/download/v0.1.0/asfd-x86_64-unknown-linux-musl
+ $ asfald --hash 87b5fbf82d9258782ffbd141ffbeab954af3ce6ff7a1ad336c70196f40ac233c \\
+        https://github.com/asfaload/asfald/releases/download/v0.1.0/asfald-x86_64-unknown-linux-musl
 ", style("Examples:").bold().underlined(), style("Custom checksums file").underlined(), style("Literal hash value").underlined())
 });
 
@@ -103,7 +122,7 @@ fn log_warn(msg: &str) {
 
 #[derive(Parser)]
 #[command(
-    name = "asfd",
+    name = "asfald",
     about = "Download a file from a URL and check its checksum",
     after_help = EXAMPLE_HELP.as_str()
 )]
@@ -139,13 +158,19 @@ struct ChecksumSource {
     /// Specify the checksum value for the downloaded file
     #[arg(short = 'H', long = "hash", value_name = "HASH")]
     hash_value: Option<String>,
+    /// Specify the checksum value for the downloaded file
+    #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
+    asfaload_host: bool,
 }
 
 async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
     reqwest::get(url).await?.error_for_status()
 }
 
-async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidator> {
+// Returns a result of tuple (validator,url), so the url can be reported to the user
+async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<(ChecksumValidator, Url)> {
+    // Clone url as it is moved by fetch_url
+    let returned_url = url.clone();
     let data = fetch_url(url)
         .await
         .context("Unable to fetch checksum file")?
@@ -157,7 +182,8 @@ async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<ChecksumValidato
     match data.parse::<Checksum>() {
         Ok(checksum) => checksum
             .into_validator(file)
-            .context(format!("Unable to find '{file}' in checksum")),
+            .context(format!("Unable to find '{file}' in checksum"))
+            .map(|validator| (validator, returned_url)),
         Err(e) => anyhow::bail!("Failed to parse checksum file: {e:?}"),
     }
 }
@@ -183,7 +209,28 @@ fn update_url_path(url: &Url, path: &str) -> Url {
     nurl.set_path(&root_path);
     nurl
 }
-
+// Return a new URL with the path updated
+fn update_url_asfaload_host(url: &Url) -> Url {
+    let chosen_host = ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap();
+    let mut nurl = url.clone();
+    let npath = chosen_host
+        // Tke the mirror's prefix
+        .prefix
+        // Put the `/` in front of it
+        .map(|p| p.to_string() + "/")
+        // And get it out of the option, or the empty string
+        .unwrap_or_default()
+        // Put the host in the path
+        + &url.host().unwrap().to_string()
+        // Followed by the full original path
+        + url.path();
+    nurl.set_path(&npath);
+    let host_result = nurl.set_host(Some(chosen_host.host));
+    host_result
+        .map(|_| -> Url { nurl })
+        .context("Error setting asfaload host in checksums url")
+        .unwrap()
+}
 // Return the checksums file url that will be used when downloading the file at url
 // and using the location 'path' to find the checksums file.
 fn handle_pattern(url: &url::Url, path: &str) -> std::option::Option<url::Url> {
@@ -284,8 +331,12 @@ async fn run() -> anyhow::Result<()> {
                     if pattern.starts_with("http") {
                         use_pattern_as_url_if_valid_scheme(&url, &pattern)
                     }
+                    // Look on our checksums mirrors
+                    else if checksum_flag.asfaload_host {
+                        let url = update_url_path(&url, &pattern);
+                        update_url_asfaload_host(&url)
                     // Template is a path, look on same server as file
-                    else {
+                    } else {
                         update_url_path(&url, &pattern)
                     }
                 })
@@ -293,8 +344,11 @@ async fn run() -> anyhow::Result<()> {
 
             // Select the first checksum file that is found
             match select_ok(checksums_patterns).await {
-                Ok((checksum, _)) => {
-                    log_step(FOUND, "Checksum file found !");
+                Ok(((checksum, url), _)) => {
+                    log_step(
+                        FOUND,
+                        format!("Checksum file found at {}!", url.host().unwrap()).as_str(),
+                    );
                     Some(checksum)
                 }
                 Err(e) => {
@@ -390,7 +444,7 @@ mod helpers_tests {
 
     #[test]
     fn test_update_url_path() {
-        let new_path = "/asfd-checksums/v0.0.1";
+        let new_path = "/asfald-checksums/v0.0.1";
         let url1 = Url::parse("http://www.asfaload.com/blog").unwrap();
         let url2 = update_url_path(&url1, new_path);
         assert_eq!(url1.path(), "/blog");

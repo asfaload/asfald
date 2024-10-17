@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `--hash` flag to pass the expected hash of the downloaded file.
 
+### Changed
+
+- Renamed to asfald
+
 ## 0.1.0 - 2024-09-18
 
 ### Added
