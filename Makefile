@@ -53,7 +53,7 @@ gh-prepare-release:
 			chmod +x $$dir/asfald; \
 			tar zcvf release/$$dir.tar.gz $$dir; \
 		else \
-			zip release/$$dir.zip $$dir;\
+			zip -r release/$$dir.zip $$dir;\
 		fi; \
 		rm -r $${dir:?dir must be defined}; \
 	done; \
