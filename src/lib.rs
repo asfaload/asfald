@@ -78,6 +78,7 @@ mod lib_tests {
     }
 
     #[test]
+    // Retrieve hash of specified type
     fn get_file_hash() -> Result<()> {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
 
@@ -103,6 +104,13 @@ mod lib_tests {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
         let file_entry = index.get_hash_for_file("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
         assert_eq!(file_entry, Err(ChecksumError::MultipleValues));
+
+        // File has no hash
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_hash_for_file("inexisting.tar.gz", v1::Algo::Sha256);
+        assert_eq!(file_entry, Err(ChecksumError::NotFound));
 
         // Has both Sha512 and Sha256
         // FIXME: best solution to avoid redefining index as workaround for borrow checker
