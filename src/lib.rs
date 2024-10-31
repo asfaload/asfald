@@ -9,6 +9,13 @@ mod v1 {
         Sha256,
         Sha512,
     }
+
+    impl Algo {
+        pub fn iter<'a>() -> std::slice::Iter<'a, Algo> {
+            const VALUES: [Algo; 4] = [Algo::Sha512, Algo::Sha256, Algo::Sha1, Algo::Md5];
+            VALUES.iter()
+        }
+    }
     #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
     pub struct FileChecksum {
         pub fileName: String,
@@ -16,7 +23,7 @@ mod v1 {
         pub source: String,
         pub hash: String,
     }
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct AsfaloadIndex {
         pub mirroredOn: DateTime<chrono::Utc>,
         pub publishedOn: DateTime<chrono::Utc>,
@@ -24,7 +31,7 @@ mod v1 {
         pub publishedFiles: Vec<FileChecksum>,
     }
 
-    #[derive(PartialEq, Debug)]
+    #[derive(PartialEq, Debug, Clone)]
     pub enum ChecksumError {
         NotFound,
         MultipleValues,
@@ -53,6 +60,20 @@ mod v1 {
                         Err(ChecksumError::MultipleValues)
                     }
                 }
+            }
+        }
+
+        // Return one hash found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
+        pub fn get_best_hash_for_file(
+            &self,
+            filename: &str,
+        ) -> Result<FileChecksum, ChecksumError> {
+            let o = Algo::iter()
+                .map(|algo| self.clone().get_hash_for_file(filename, algo.clone()))
+                .find(|v| v.is_ok());
+            match o {
+                Some(v) => v.clone(),
+                None => Err(ChecksumError::NotFound),
             }
         }
     }
@@ -129,6 +150,35 @@ mod lib_tests {
             file_entry.map(|f| f.hash),
             Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_best_file_hash() -> Result<()> {
+        // Normal situation: one hash is found
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_best_hash_for_file("hctl_freebsd_arm64.tar.gz");
+        assert_eq!(
+            file_entry.map(|f| f.hash),
+            Ok("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b".to_string())
+        );
+        // Has both Sha256 and Sha512, should prefer Sha512
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_best_hash_for_file("hctl_freebsd_i386.tar.gz");
+        assert_eq!(
+            file_entry.map(|f| f.hash),
+            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+        );
+        // File has no hash
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_best_hash_for_file("inexisting.tar.gz");
+        assert_eq!(file_entry.map(|f| f.hash), Err(ChecksumError::NotFound));
+
         Ok(())
     }
     // This json tweaked to include specific situations:
