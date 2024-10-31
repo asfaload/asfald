@@ -2,14 +2,14 @@ mod v1 {
     use ::serde::{Deserialize, Serialize};
     use chrono::{serde, DateTime};
 
-    #[derive(PartialEq, Serialize, Deserialize)]
+    #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
     pub enum Algo {
         Md5,
         Sha1,
         Sha256,
         Sha512,
     }
-    #[derive(Serialize, Deserialize)]
+    #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
     pub struct FileChecksum {
         pub fileName: String,
         pub algo: Algo,
@@ -35,19 +35,20 @@ mod v1 {
             self,
             filename: &str,
             algo: Algo,
-        ) -> Result<String, ChecksumError> {
+        ) -> Result<FileChecksum, ChecksumError> {
             let found: Vec<FileChecksum> = self
                 .publishedFiles
                 .into_iter()
                 .filter(|file| file.fileName == filename && file.algo == algo)
                 .collect();
             match found.len() {
-                1 => Ok(found[0].hash.clone()),
+                1 => Ok(found[0].clone()),
                 0 => Err(ChecksumError::NotFound),
                 _ => {
                     let first_hash = found[0].hash.clone();
                     if found.iter().all(|file| file.hash == first_hash) {
-                        Ok(found[0].hash.clone())
+                        // We found multiple hash values, but arbitrarily use the first one
+                        Ok(found[0].clone())
                     } else {
                         Err(ChecksumError::MultipleValues)
                     }
@@ -81,9 +82,9 @@ mod lib_tests {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
 
         // Normal situation: one hash is found
-        let hash = index.get_hash_for_file("hctl_freebsd_arm64.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.get_hash_for_file("hctl_freebsd_arm64.tar.gz", v1::Algo::Sha256);
         assert_eq!(
-            hash,
+            file_entry.map(|f| f.hash),
             Ok("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b".to_string())
         );
 
@@ -91,17 +92,17 @@ mod lib_tests {
         // FIXME: best solution to avoid redefining index as workaround for borrow checker
         // complaint?
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let hash = index.get_hash_for_file("hctl_darwin_arm64.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.get_hash_for_file("hctl_darwin_arm64.tar.gz", v1::Algo::Sha256);
         assert_eq!(
-            hash,
+            file_entry.map(|f| f.hash),
             Ok("e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string())
         );
         // Two entries with the same hash values are found, should work fine
         // FIXME: best solution to avoid redefining index as workaround for borrow checker
         // complaint?
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let hash = index.get_hash_for_file("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
-        assert_eq!(hash, Err(ChecksumError::MultipleValues));
+        let file_entry = index.get_hash_for_file("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
+        assert_eq!(file_entry, Err(ChecksumError::MultipleValues));
 
         Ok(())
     }
