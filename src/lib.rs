@@ -104,6 +104,23 @@ mod lib_tests {
         let file_entry = index.get_hash_for_file("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
         assert_eq!(file_entry, Err(ChecksumError::MultipleValues));
 
+        // Has both Sha512 and Sha256
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_hash_for_file("hctl_freebsd_i386.tar.gz", v1::Algo::Sha256);
+        assert_eq!(
+            file_entry.map(|f| f.hash),
+            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+        );
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_hash_for_file("hctl_freebsd_i386.tar.gz", v1::Algo::Sha512);
+        assert_eq!(
+            file_entry.map(|f| f.hash),
+            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+        );
         Ok(())
     }
     // This json tweaked to include specific situations:
@@ -152,6 +169,12 @@ mod lib_tests {
             "algo": "Sha256",
             "source": "hctl_0.3.1_checksums.txt",
             "hash": "d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f"
+            },
+            {
+            "fileName": "hctl_freebsd_i386.tar.gz",
+            "algo": "Sha512",
+            "source": "hctl_0.3.1_checksums.txt",
+            "hash": "d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f"
             },
             {
             "fileName": "hctl_freebsd_x86_64.tar.gz",
