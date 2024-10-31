@@ -38,6 +38,11 @@ mod v1 {
         MultipleValues,
     }
 
+    pub enum ChecksumsForFile<'a> {
+        Consistent(Vec<&'a FileChecksum>),
+        Inconsistent(Vec<&'a FileChecksum>),
+    }
+
     impl AsfaloadIndex {
         pub fn get_hash_for_file(
             self,
@@ -79,20 +84,27 @@ mod v1 {
         }
 
         // Return all hashes found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
-        // WARNING: does not check consistency. For example could return 2 different Sha256 hashes found in
-        // different checksums files
-        pub fn get_all_hashes_for_file(&self, filename: &str) -> Vec<&FileChecksum> {
-            self.publishedFiles
+        // WARNING: does not check consistency, though it signals it in the enum case returned.
+        // For example could return 2 different Sha256 hashes found in different checksums files
+        pub fn get_all_hashes_for_file(&self, filename: &str) -> ChecksumsForFile {
+            let v = self
+                .publishedFiles
                 .iter()
                 .filter(|f| f.fileName == filename)
-                .collect::<Vec<&FileChecksum>>()
+                .collect::<Vec<&FileChecksum>>();
+            let first_hash = v[0].hash.clone();
+            if v.iter().all(|f| f.hash == first_hash) {
+                ChecksumsForFile::Consistent(v)
+            } else {
+                ChecksumsForFile::Inconsistent(v)
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod lib_tests {
-    use v1::{AsfaloadIndex, ChecksumError};
+    use v1::{AsfaloadIndex, ChecksumError, ChecksumsForFile};
 
     use super::*;
     use anyhow::Result;
@@ -200,52 +212,46 @@ mod lib_tests {
         // complaint?
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
         let file_entry = index.get_all_hashes_for_file("hctl_darwin_arm64.tar.gz");
-        assert_eq!(
-            file_entry
-                .iter()
-                .map(|f| f.hash.clone())
-                .collect::<Vec<String>>(),
-            vec![
-                "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string(),
-                "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string()
-            ]
-        );
-        assert_eq!(
-            file_entry
-                .iter()
-                .map(|f| f.source.clone())
-                .collect::<Vec<String>>(),
-            vec![
-                "hctl_0.3.1_checksums.txt",
-                "hctl_0.3.1_checksums.duplicate.txt"
-            ]
-        );
+        assert!(matches!(file_entry, ChecksumsForFile::Consistent { .. }));
+        if let ChecksumsForFile::Consistent(v) = file_entry {
+            assert_eq!(
+                v.iter().map(|f| f.hash.clone()).collect::<Vec<String>>(),
+                vec![
+                    "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string(),
+                    "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string()
+                ]
+            );
+            assert_eq!(
+                v.iter().map(|f| f.source.clone()).collect::<Vec<String>>(),
+                vec![
+                    "hctl_0.3.1_checksums.txt",
+                    "hctl_0.3.1_checksums.duplicate.txt"
+                ]
+            );
+        }
 
         // Two entries with differnt hash values for the same file are found, return both
         // FIXME: best solution to avoid redefining index as workaround for borrow checker
         // complaint?
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
         let file_entry = index.get_all_hashes_for_file("hctl_darwin_x86_64.tar.gz");
-        assert_eq!(
-            file_entry
-                .iter()
-                .map(|f| f.hash.clone())
-                .collect::<Vec<String>>(),
-            vec![
-                "2bb9254023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string(),
-                "0000000023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string()
-            ]
-        );
-        assert_eq!(
-            file_entry
-                .iter()
-                .map(|f| f.source.clone())
-                .collect::<Vec<String>>(),
-            vec![
-                "hctl_0.3.1_checksums.txt",
-                "hctl_0.3.1_checksums.invalid_duplicate.txt"
-            ]
-        );
+        assert!(matches!(file_entry, ChecksumsForFile::Inconsistent { .. }));
+        if let ChecksumsForFile::Inconsistent(v) = file_entry {
+            assert_eq!(
+                v.iter().map(|f| f.hash.clone()).collect::<Vec<String>>(),
+                vec![
+                    "2bb9254023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string(),
+                    "0000000023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string()
+                ]
+            );
+            assert_eq!(
+                v.iter().map(|f| f.source.clone()).collect::<Vec<String>>(),
+                vec![
+                    "hctl_0.3.1_checksums.txt",
+                    "hctl_0.3.1_checksums.invalid_duplicate.txt"
+                ]
+            );
+        }
 
         Ok(())
     }
