@@ -1,6 +1,7 @@
 mod v1 {
     use ::serde::{Deserialize, Serialize};
     use chrono::{serde, DateTime};
+    use itertools::Itertools;
 
     #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
     pub enum Algo {
@@ -75,6 +76,16 @@ mod v1 {
                 Some(v) => v.clone(),
                 None => Err(ChecksumError::NotFound),
             }
+        }
+
+        // Return all hashes found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
+        // WARNING: does not check consistency. For example could return 2 different Sha256 hashes found in
+        // different checksums files
+        pub fn get_all_hashes_for_file(&self, filename: &str) -> Vec<&FileChecksum> {
+            self.publishedFiles
+                .iter()
+                .filter(|f| f.fileName == filename)
+                .collect::<Vec<&FileChecksum>>()
         }
     }
 }
@@ -178,6 +189,63 @@ mod lib_tests {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
         let file_entry = index.get_best_hash_for_file("inexisting.tar.gz");
         assert_eq!(file_entry.map(|f| f.hash), Err(ChecksumError::NotFound));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_all_file_hashes() -> Result<()> {
+        // Two entries with the same hash values are found, return both
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_all_hashes_for_file("hctl_darwin_arm64.tar.gz");
+        assert_eq!(
+            file_entry
+                .iter()
+                .map(|f| f.hash.clone())
+                .collect::<Vec<String>>(),
+            vec![
+                "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string(),
+                "e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string()
+            ]
+        );
+        assert_eq!(
+            file_entry
+                .iter()
+                .map(|f| f.source.clone())
+                .collect::<Vec<String>>(),
+            vec![
+                "hctl_0.3.1_checksums.txt",
+                "hctl_0.3.1_checksums.duplicate.txt"
+            ]
+        );
+
+        // Two entries with differnt hash values for the same file are found, return both
+        // FIXME: best solution to avoid redefining index as workaround for borrow checker
+        // complaint?
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+        let file_entry = index.get_all_hashes_for_file("hctl_darwin_x86_64.tar.gz");
+        assert_eq!(
+            file_entry
+                .iter()
+                .map(|f| f.hash.clone())
+                .collect::<Vec<String>>(),
+            vec![
+                "2bb9254023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string(),
+                "0000000023af4307db99e1f0165e481e54f78e4cf23fa1f169a229ffcc539789".to_string()
+            ]
+        );
+        assert_eq!(
+            file_entry
+                .iter()
+                .map(|f| f.source.clone())
+                .collect::<Vec<String>>(),
+            vec![
+                "hctl_0.3.1_checksums.txt",
+                "hctl_0.3.1_checksums.invalid_duplicate.txt"
+            ]
+        );
 
         Ok(())
     }
