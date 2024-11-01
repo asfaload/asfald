@@ -1,9 +1,12 @@
+#[allow(dead_code)]
 mod v1 {
+    use std::{collections::HashMap};
+
     use ::serde::{Deserialize, Serialize};
-    use chrono::{serde, DateTime};
+    use chrono::DateTime;
     use itertools::Itertools;
 
-    #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize, Clone)]
     pub enum Algo {
         Md5,
         Sha1,
@@ -17,19 +20,22 @@ mod v1 {
             VALUES.iter()
         }
     }
+
     #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+    #[serde(rename_all = "camelCase")]
     pub struct FileChecksum {
-        pub fileName: String,
+        pub file_name: String,
         pub algo: Algo,
         pub source: String,
         pub hash: String,
     }
     #[derive(Serialize, Deserialize, Clone)]
+    #[serde(rename_all = "camelCase")]
     pub struct AsfaloadIndex {
-        pub mirroredOn: DateTime<chrono::Utc>,
-        pub publishedOn: DateTime<chrono::Utc>,
+        pub mirrored_on: DateTime<chrono::Utc>,
+        pub published_on: DateTime<chrono::Utc>,
         pub version: i32,
-        pub publishedFiles: Vec<FileChecksum>,
+        published_files: Vec<FileChecksum>,
     }
 
     #[derive(PartialEq, Debug, Clone)]
@@ -43,61 +49,121 @@ mod v1 {
         Inconsistent(Vec<&'a FileChecksum>),
     }
 
+    impl<'a> ChecksumsForFile<'a> {
+        pub fn into_inner(self) -> Vec<&'a FileChecksum> {
+            match self {
+                ChecksumsForFile::Consistent(vec) => vec,
+                ChecksumsForFile::Inconsistent(vec) => vec,
+            }
+        }
+
+        pub fn as_mut(&mut self) -> &mut Vec<&'a FileChecksum> {
+            match self {
+                ChecksumsForFile::Consistent(vec) => vec,
+                ChecksumsForFile::Inconsistent(vec) => vec,
+            }
+        }
+    }
+
+    pub trait FileChecksumIterator<T>: Sized + Iterator<Item = T> {
+        fn file(self, file_name: &str) -> impl FileChecksumIterator<T>;
+        fn algo(self, algo: Algo) -> impl FileChecksumIterator<T>;
+        fn unique_hash(self) -> impl FileChecksumIterator<T>;
+        fn sort_by_algo(self) -> impl FileChecksumIterator<T>;
+    }
+
+    impl<'a, I: Iterator<Item = &'a FileChecksum>> FileChecksumIterator<&'a FileChecksum> for I {
+        fn file(self, file_name: &str) -> impl FileChecksumIterator<&'a FileChecksum> {
+            self.filter(move |item| item.file_name == file_name)
+        }
+
+        fn algo(self, algo: Algo) -> impl FileChecksumIterator<&'a FileChecksum> {
+            self.filter(move |item| item.algo == algo)
+        }
+
+        fn unique_hash(self) -> impl FileChecksumIterator<&'a FileChecksum> {
+            self.unique_by(|c| c.hash.as_str())
+        }
+
+        fn sort_by_algo(self) -> impl FileChecksumIterator<&'a FileChecksum> {
+            self.sorted_by(|a, b| b.algo.cmp(&a.algo))
+        }
+    }
+
+    impl<I: Iterator<Item = FileChecksum>> FileChecksumIterator<FileChecksum> for I {
+        fn file(self, file_name: &str) -> impl FileChecksumIterator<FileChecksum> {
+            self.filter(move |item| item.file_name == file_name)
+        }
+
+        fn algo(self, algo: Algo) -> impl FileChecksumIterator<FileChecksum> {
+            self.filter(move |item| item.algo == algo)
+        }
+
+        fn unique_hash(self) -> impl FileChecksumIterator<FileChecksum> {
+            self.unique_by(|c| c.hash.to_string())
+        }
+
+        fn sort_by_algo(self) -> impl FileChecksumIterator<FileChecksum> {
+            self.sorted_by(|a, b| a.algo.cmp(&b.algo))
+        }
+    }
+
     impl AsfaloadIndex {
-        pub fn get_hash_for_file(
-            self,
-            filename: &str,
-            algo: Algo,
-        ) -> Result<FileChecksum, ChecksumError> {
-            let found: Vec<FileChecksum> = self
-                .publishedFiles
-                .into_iter()
-                .filter(|file| file.fileName == filename && file.algo == algo)
-                .collect();
-            match found.len() {
-                1 => Ok(found[0].clone()),
-                0 => Err(ChecksumError::NotFound),
-                _ => {
-                    let first_hash = found[0].hash.clone();
-                    if found.iter().all(|file| file.hash == first_hash) {
-                        // We found multiple hash values, but arbitrarily use the first one
-                        Ok(found[0].clone())
+        pub fn iter(&self) -> impl FileChecksumIterator<&FileChecksum> {
+            self.published_files.iter()
+        }
+
+        pub fn into_iter(self) -> impl FileChecksumIterator<FileChecksum> {
+            self.published_files.into_iter()
+        }
+
+        pub fn hash(&self, filename: &str, algo: Algo) -> Result<&FileChecksum, ChecksumError> {
+            let mut iter = self.iter().file(filename).algo(algo).unique_hash();
+            match iter.next() {
+                Some(first) => {
+                    if iter.next().is_none() {
+                        Ok(first)
                     } else {
                         Err(ChecksumError::MultipleValues)
                     }
                 }
+                None => Err(ChecksumError::NotFound),
             }
         }
 
         // Return one hash found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
-        pub fn get_best_hash_for_file(
-            &self,
-            filename: &str,
-        ) -> Result<FileChecksum, ChecksumError> {
-            let o = Algo::iter()
-                .map(|algo| self.clone().get_hash_for_file(filename, algo.clone()))
-                .find(|v| v.is_ok());
-            match o {
-                Some(v) => v.clone(),
-                None => Err(ChecksumError::NotFound),
-            }
+        pub fn best_hash(&self, filename: &str) -> Option<&FileChecksum> {
+            self.iter()
+                .file(filename)
+                .unique_hash()
+                .sort_by_algo()
+                .next()
         }
 
         // Return all hashes found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
         // WARNING: does not check consistency, though it signals it in the enum case returned.
         // For example could return 2 different Sha256 hashes found in different checksums files
-        pub fn get_all_hashes_for_file(&self, filename: &str) -> ChecksumsForFile {
-            let v = self
-                .publishedFiles
-                .iter()
-                .filter(|f| f.fileName == filename)
-                .collect::<Vec<&FileChecksum>>();
-            let first_hash = v[0].hash.clone();
-            if v.iter().all(|f| f.hash == first_hash) {
-                ChecksumsForFile::Consistent(v)
-            } else {
-                ChecksumsForFile::Inconsistent(v)
-            }
+        pub fn all_hashes(&self, filename: &str) -> ChecksumsForFile {
+            self.iter()
+                .file(filename)
+                .sort_by_algo()
+                .fold(
+                    (HashMap::new(), ChecksumsForFile::Consistent(Vec::new())),
+                    |(mut visited, mut list), item| {
+                        if let Some(hash) = visited.get(&item.algo) {
+                            if hash != &item.hash {
+                                list = ChecksumsForFile::Inconsistent(list.into_inner())
+                            }
+                        } else {
+                            visited.insert(&item.algo, item.hash.clone());
+                        }
+
+                        list.as_mut().push(item);
+
+                        (visited, list)
+                    },
+                )
+                .1
         }
     }
 }
@@ -115,7 +181,7 @@ mod lib_tests {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
         assert_eq!(index.version, 1);
         assert_eq!(
-            index.mirroredOn,
+            index.mirrored_on,
             serde_json::from_str::<DateTime<chrono::Utc>>("\"2024-10-30T10:48:24.9397405+00:00\"")?
         );
         Ok(())
@@ -123,95 +189,79 @@ mod lib_tests {
 
     #[test]
     // Retrieve hash of specified type
-    fn get_file_hash() -> Result<()> {
+    fn test_hash() -> Result<()> {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
 
         // Normal situation: one hash is found
-        let file_entry = index.get_hash_for_file("hctl_freebsd_arm64.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.hash("hctl_freebsd_arm64.tar.gz", v1::Algo::Sha256);
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Ok("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b")
         );
 
         // Two entries with the same hash values are found, should work fine
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_hash_for_file("hctl_darwin_arm64.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.hash("hctl_darwin_arm64.tar.gz", v1::Algo::Sha256);
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Ok("e9e40eeb6c6c049c863cdf8769a8a9553c3739bac5ab1e05444509d676185e6e")
         );
+
         // Two entries with the same hash values are found, should work fine
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_hash_for_file("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.hash("hctl_darwin_x86_64.tar.gz", v1::Algo::Sha256);
         assert_eq!(file_entry, Err(ChecksumError::MultipleValues));
 
         // File has no hash
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_hash_for_file("inexisting.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.hash("inexisting.tar.gz", v1::Algo::Sha256);
         assert_eq!(file_entry, Err(ChecksumError::NotFound));
 
         // Has both Sha512 and Sha256
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_hash_for_file("hctl_freebsd_i386.tar.gz", v1::Algo::Sha256);
+        let file_entry = index.hash("hctl_freebsd_i386.tar.gz", v1::Algo::Sha256);
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f")
         );
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_hash_for_file("hctl_freebsd_i386.tar.gz", v1::Algo::Sha512);
+
+        let file_entry = index.hash("hctl_freebsd_i386.tar.gz", v1::Algo::Sha512);
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f")
         );
 
         Ok(())
     }
 
     #[test]
-    fn get_best_file_hash() -> Result<()> {
+    fn test_best_hash() -> Result<()> {
+        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
+
         // Normal situation: one hash is found
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_best_hash_for_file("hctl_freebsd_arm64.tar.gz");
+        let file_entry = index.best_hash("hctl_freebsd_arm64.tar.gz");
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Some("03ecde4a2efdbfa234b6aaa3ab166ee92e83ffd0d3521b455b51d00ff171909b")
         );
+
         // Has both Sha256 and Sha512, should prefer Sha512
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_best_hash_for_file("hctl_freebsd_i386.tar.gz");
+        let file_entry = index.best_hash("hctl_freebsd_i386.tar.gz");
         assert_eq!(
-            file_entry.map(|f| f.hash),
-            Ok("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f".to_string())
+            file_entry.map(|f| f.hash.as_str()),
+            Some("d16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9fd16af5a91631f0c2232c747fa773a8dab21aa896894bbba55847e74a100eec9f")
         );
+
         // File has no hash
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_best_hash_for_file("inexisting.tar.gz");
-        assert_eq!(file_entry.map(|f| f.hash), Err(ChecksumError::NotFound));
+        let file_entry = index.best_hash("inexisting.tar.gz");
+        assert_eq!(file_entry.map(|f| f.hash.as_str()), None);
 
         Ok(())
     }
 
     #[test]
-    fn get_all_file_hashes() -> Result<()> {
-        // Two entries with the same hash values are found, return both
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
+    fn test_all_hashes() -> Result<()> {
         let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_all_hashes_for_file("hctl_darwin_arm64.tar.gz");
+
+        // Two entries with the same hash values are found, return both
+        let file_entry = index.all_hashes("hctl_darwin_arm64.tar.gz");
+
         assert!(matches!(file_entry, ChecksumsForFile::Consistent { .. }));
         if let ChecksumsForFile::Consistent(v) = file_entry {
             assert_eq!(
@@ -231,10 +281,8 @@ mod lib_tests {
         }
 
         // Two entries with differnt hash values for the same file are found, return both
-        // FIXME: best solution to avoid redefining index as workaround for borrow checker
-        // complaint?
-        let index: AsfaloadIndex = serde_json::from_str(JSON)?;
-        let file_entry = index.get_all_hashes_for_file("hctl_darwin_x86_64.tar.gz");
+        let file_entry = index.all_hashes("hctl_darwin_x86_64.tar.gz");
+
         assert!(matches!(file_entry, ChecksumsForFile::Inconsistent { .. }));
         if let ChecksumsForFile::Inconsistent(v) = file_entry {
             assert_eq!(
@@ -255,6 +303,7 @@ mod lib_tests {
 
         Ok(())
     }
+
     // This json tweaked to include specific situations:
     // - sha is duplicated in 2 checksums files, with the same value (we can use this)
     // - sha is duplicated in 2 checksums files but with different values (we cannot determine
