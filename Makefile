@@ -11,6 +11,7 @@ linux-static:
 check:
 	cargo rustc -- -D warnings
 
+
 ## RELEASE step 1: Start our workflow generating artifacts.
 gh-build-binaries:
 	@echo "starting workflow"

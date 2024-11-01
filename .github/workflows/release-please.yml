@@ -4,6 +4,12 @@ on:
   push:
     branches: [ "master" ]
 
+env:
+  CARGO_TERM_COLOR: always
+  CRATE_NAME: asfald
+  RUST_BACKTRACE: 1
+  GITHUB_TOKEN: ${{ github.token }}
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -14,8 +20,55 @@ jobs:
       packages: write
       pull-requests: write
 
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           release-type: rust
+
+  build-release:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/build.yml
+
+  publish-release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    needs: [release-please, build-release]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      - name: Generate release artifacts
+        run: |
+          set -x
+          cd ./artifacts
+          mkdir -p release
+          for dir in asfald-*; do
+            cp ../LICENSE $dir/
+            if [[ ! $dir =~ windows ]]; then
+              cp $dir/asfald release/$dir
+              chmod +x $dir/asfald
+              tar zcvf release/$dir.tar.gz $dir
+            else
+              zip -r release/$dir.zip $dir
+            fi
+          done
+      - name: Generate checksum
+        run: |
+          set -x
+          cd ./artifacts/release
+          sha256sum * | tee checksums.txt
+      - name: Upload artifacts to draft release
+        uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: ./artifacts/release/*
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
