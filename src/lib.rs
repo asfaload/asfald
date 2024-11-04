@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 mod v1 {
-    use std::{collections::HashMap};
+    use std::collections::HashMap;
 
     use ::serde::{Deserialize, Serialize};
     use chrono::DateTime;

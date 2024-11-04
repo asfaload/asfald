@@ -1,6 +1,5 @@
-use log::{LevelFilter, Log, Metadata, Record};
-
 /// A simple logger that writes error messages to stderr and other messages to stdout.
+use log::{LevelFilter, Log, Metadata, Record};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct Logger {
@@ -42,4 +41,34 @@ impl Log for Logger {
     }
 
     fn flush(&self) {}
+}
+
+pub mod helpers {
+    use console::{style, Emoji};
+    use log::{error, info, warn};
+    pub static SEARCH: Emoji<'_, '_> = Emoji("🔍", "");
+    pub static FOUND: Emoji<'_, '_> = Emoji("✨", "");
+    pub static INFO: Emoji<'_, '_> = Emoji("ℹ️", "");
+    pub static WARN: Emoji<'_, '_> = Emoji("⚠️", "");
+    pub static TRASH: Emoji<'_, '_> = Emoji("🗑️", "");
+    pub static DOWNLOAD: Emoji<'_, '_> = Emoji("🚚", "");
+    pub static VALID: Emoji<'_, '_> = Emoji("✅", "");
+    pub static INVALID: Emoji<'_, '_> = Emoji("❌", "");
+    pub static ERROR: Emoji<'_, '_> = Emoji("🚨", "/!\\");
+
+    pub fn log_step(emoji: Emoji<'_, '_>, msg: &str) {
+        info!("{} {}", emoji, msg);
+    }
+
+    pub fn log_info(msg: &str) {
+        info!("{} {}", INFO, msg);
+    }
+
+    pub fn log_err(msg: &str) {
+        error!("{} {}", ERROR, style(msg).bold().red());
+    }
+
+    pub fn log_warn(msg: &str) {
+        warn!("{} {}", WARN, style(msg).bold().yellow());
+    }
 }
