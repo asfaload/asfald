@@ -1,6 +1,8 @@
+#[allow(dead_code)]
 // code regarding our checksums mirrors
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
@@ -13,6 +15,7 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
         },
     ]
 });
+#[derive(Clone)]
 pub struct AsfaloadHost<'a> {
     // Host on which our checksums are available, eg asfaload.github.io
     pub host: &'a str,
@@ -23,4 +26,40 @@ pub struct AsfaloadHost<'a> {
 
 pub fn choose<'a>() -> &'a AsfaloadHost<'a> {
     ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap()
+}
+pub fn path_on_mirror(host: &AsfaloadHost, url: &url::Url) -> String {
+    host
+    // Tke the mirror's prefix
+    .prefix
+    // Put the `/` in front of it
+    .map(|p| p.to_string() + "/")
+    // And get it out of the option, or the empty string
+    .unwrap_or_default()
+    // Put the host in the path
+    + &url.host().unwrap().to_string()
+    // Followed by the full original path
+    + url.path()
+}
+
+pub fn index_path(url: url::Url) {
+    //Path::
+}
+
+//pub fn checksum(url: url::Url) -> Option<ChecksumValidator> {}
+
+#[cfg(test)]
+mod asfaload_mirror_tests {
+
+    use super::*;
+    use anyhow::Result;
+
+    #[test]
+    fn test_path_on_mirror() -> Result<()> {
+        let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        let expected_on_mirror = "github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz";
+        let host = ASFALOAD_HOSTS.first().unwrap();
+        let mirror_path = path_on_mirror(host, &download_url);
+        assert_eq!(mirror_path, expected_on_mirror);
+        Ok(())
+    }
 }
