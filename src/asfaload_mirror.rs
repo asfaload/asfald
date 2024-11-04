@@ -1,3 +1,4 @@
+use anyhow::Context;
 #[allow(dead_code)]
 // code regarding our checksums mirrors
 use once_cell::sync::Lazy;
@@ -41,11 +42,12 @@ pub fn path_on_mirror(host: &AsfaloadHost, url: &url::Url) -> String {
     + url.path()
 }
 
-pub fn index_path(url: url::Url) {
-    //Path::
+pub fn url_on_mirror(host: &AsfaloadHost, url: &url::Url) -> url::Url {
+    let path = path_on_mirror(host, url);
+    url::Url::parse(format!("https://{}/{}", host.host, path).as_str())
+        .context("Problem constructing url on mirror")
+        .unwrap()
 }
-
-//pub fn checksum(url: url::Url) -> Option<ChecksumValidator> {}
 
 #[cfg(test)]
 mod asfaload_mirror_tests {
@@ -60,6 +62,15 @@ mod asfaload_mirror_tests {
         let host = ASFALOAD_HOSTS.first().unwrap();
         let mirror_path = path_on_mirror(host, &download_url);
         assert_eq!(mirror_path, expected_on_mirror);
+        Ok(())
+    }
+
+    fn test_url_on_mirror() -> Result<()> {
+        let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        let expected_on_mirror = "https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz";
+        let host = ASFALOAD_HOSTS.first().unwrap();
+        let mirror_url = url_on_mirror(host, &download_url);
+        assert_eq!(mirror_url.to_string(), expected_on_mirror);
         Ok(())
     }
 }
