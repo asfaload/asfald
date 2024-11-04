@@ -1,11 +1,12 @@
 // all functionalities to handle checksums files without asfaload index files
+#[path = "./asfaload_mirror.rs"]
+mod asfaload_mirror;
 use crate::checksum;
 use crate::logger;
 use anyhow::Context;
 use checksum::{Checksum, ChecksumValidator};
 use logger::helpers::log_warn;
 use once_cell::sync::Lazy;
-use rand::seq::SliceRandom;
 use url::Url;
 
 pub static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
@@ -26,28 +27,9 @@ pub static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
     ]
 });
 
-static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
-    vec![
-        AsfaloadHost {
-            host: "gh.checksums.asfaload.com",
-            prefix: None,
-        },
-        AsfaloadHost {
-            host: "cf.checksums.asfaload.com",
-            prefix: None,
-        },
-    ]
-});
-struct AsfaloadHost<'a> {
-    // Host on which our checksums are available, eg asfaload.github.io
-    host: &'a str,
-    // The prefix to add to the path to the checksums file compared to the original path, eg
-    // /checksums
-    prefix: Option<&'a str>,
-}
 // Return a new URL with the path updated
 pub fn update_url_asfaload_host(url: &Url) -> Url {
-    let chosen_host = ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap();
+    let chosen_host = asfaload_mirror::choose();
     let mut nurl = url.clone();
     let npath = chosen_host
         // Tke the mirror's prefix
