@@ -11,7 +11,7 @@ use crate::utils;
 mod json;
 use json::v1;
 
-const INDEX_NAME: &str = ".asfaload.index.json";
+const INDEX_NAME: &str = "asfaload.index.json";
 
 pub fn index_for(url: &url::Url) -> url::Url {
     let mirror_host = asfaload_mirror::choose();
