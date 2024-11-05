@@ -3,7 +3,6 @@ use anyhow::Context;
 // code regarding our checksums mirrors
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
-
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
