@@ -146,7 +146,6 @@ async fn run() -> anyhow::Result<()> {
     let file = url_path.last().context("No file found in URL")?.to_owned();
     let path = url_path[..url_path.len() - 1].join("/");
 
-    let index = index::index_for(&url);
     let mut checksum = match args.checksum_source.hash_value {
         // The hash string was passed to the CLI with the flag --hash. We use it and
         // don't look for a file on a server.
@@ -157,64 +156,66 @@ async fn run() -> anyhow::Result<()> {
         // No hash value was passed as argument to the CLI with the --hash flag.
         // This means we need to look for the hash in a file.
         None => {
-            //if checksum_flag.asfaload_index {
-            //    log_info("Using asfaload index on mirror");
-            //    let checksum = asfaload_mirror::checksum(url);
-            //} else {
-            log_info("Will for hash in a checksums file");
-            // Create a hashmap with the path and file to be used in the templates
-            let vars = HashMap::from([
-                ("fullpath".to_string(), url_path.join("/")),
-                ("path".to_string(), path),
-                ("file".to_string(), file.clone()),
-            ]);
-            // This shouldn't happen:
-            envsubst::validate_vars(&vars).context("unable to validate substitution variables")?;
+            if checksum_flag.asfaload_index {
+                log_info("Using asfaload index on mirror");
+                let validator = index::checksum_for(&url).await?;
+                Some(validator)
+            } else {
+                log_info("Will for hash in a checksums file");
+                // Create a hashmap with the path and file to be used in the templates
+                let vars = HashMap::from([
+                    ("fullpath".to_string(), url_path.join("/")),
+                    ("path".to_string(), path),
+                    ("file".to_string(), file.clone()),
+                ]);
+                // This shouldn't happen:
+                envsubst::validate_vars(&vars)
+                    .context("unable to validate substitution variables")?;
 
-            log_step(SEARCH, "Looking for checksum files...");
-            // Create a stream of checksum downloads
-            let checksums_patterns = CHECKSUMS_FILES
-                .iter()
-                .chain(checksum_flag.checksum_patterns.iter())
-                // It is safe to unwrap as the only possible error is catched by the validate_vars above
-                .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
-                // Build the URL where to get the checksums file.
-                .map(|pattern| {
-                    // Helper to build the replace the path of url by the path passed as argument
-                    // Template is supposedly a full url
-                    if pattern.starts_with("http") {
-                        repo_checksums::use_pattern_as_url_if_valid_scheme(&url, &pattern)
-                    }
-                    // Look on our checksums mirrors
-                    else if checksum_flag.asfaload_host {
-                        let url = update_url_path(&url, &pattern);
-                        update_url_asfaload_host(&url)
-                    // Template is a path, look on same server as file
-                    } else {
-                        update_url_path(&url, &pattern)
-                    }
-                })
-                .map(|url| Box::pin(fetch_checksum(url, &file)));
+                log_step(SEARCH, "Looking for checksum files...");
+                // Create a stream of checksum downloads
+                let checksums_patterns = CHECKSUMS_FILES
+                    .iter()
+                    .chain(checksum_flag.checksum_patterns.iter())
+                    // It is safe to unwrap as the only possible error is catched by the validate_vars above
+                    .map(|tmpl| envsubst::substitute(tmpl, &vars).unwrap())
+                    // Build the URL where to get the checksums file.
+                    .map(|pattern| {
+                        // Helper to build the replace the path of url by the path passed as argument
+                        // Template is supposedly a full url
+                        if pattern.starts_with("http") {
+                            repo_checksums::use_pattern_as_url_if_valid_scheme(&url, &pattern)
+                        }
+                        // Look on our checksums mirrors
+                        else if checksum_flag.asfaload_host {
+                            let url = update_url_path(&url, &pattern);
+                            update_url_asfaload_host(&url)
+                        // Template is a path, look on same server as file
+                        } else {
+                            update_url_path(&url, &pattern)
+                        }
+                    })
+                    .map(|url| Box::pin(fetch_checksum(url, &file)));
 
-            // Select the first checksum file that is found
-            match select_ok(checksums_patterns).await {
-                Ok(((checksum, url), _)) => {
-                    log_step(
-                        FOUND,
-                        format!("Checksum file found at {}!", url.host().unwrap()).as_str(),
-                    );
-                    Some(checksum)
-                }
-                Err(e) => {
-                    if args.force_absent || args.force_invalid {
-                        log_warn("Checksum file not found, but continuing due to --force-absent or --force-invalid flag");
-                        None
-                    } else {
-                        return Err(e);
+                // Select the first checksum file that is found
+                match select_ok(checksums_patterns).await {
+                    Ok(((checksum, url), _)) => {
+                        log_step(
+                            FOUND,
+                            format!("Checksum file found at {}!", url.host().unwrap()).as_str(),
+                        );
+                        Some(checksum)
+                    }
+                    Err(e) => {
+                        if args.force_absent || args.force_invalid {
+                            log_warn("Checksum file not found, but continuing due to --force-absent or --force-invalid flag");
+                            None
+                        } else {
+                            return Err(e);
+                        }
                     }
                 }
             }
-            //}
         }
     };
 

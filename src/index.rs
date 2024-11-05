@@ -20,7 +20,7 @@ pub fn index_for(url: &url::Url) -> url::Url {
 }
 
 //pub async fn checksum_for(url: url::Url) -> Result<ChecksumValidator, reqwest::Error> {
-pub async fn checksum_for(url: url::Url) -> anyhow::Result<ChecksumValidator> {
+pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
     let index_url = index_for(&url);
     let filename = url
         .path_segments()
