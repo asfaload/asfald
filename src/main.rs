@@ -16,11 +16,16 @@ use url::Url;
 mod checksum;
 use checksum::Checksum;
 
+mod index;
+
 mod logger;
 use logger::helpers::{
     log_err, log_info, log_step, log_warn, DOWNLOAD, FOUND, INVALID, SEARCH, TRASH, VALID,
 };
 use logger::Logger;
+
+mod utils;
+use utils::fetch_url;
 
 mod repo_checksums;
 use repo_checksums::*;
@@ -104,6 +109,12 @@ struct ChecksumSource {
     /// Specify the checksum value for the downloaded file
     #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
     asfaload_host: bool,
+    #[arg(
+        short = 'i',
+        long = "asfaload-index",
+        value_name = "WITH_ASFALOAD_INDEX"
+    )]
+    asfaload_index: bool,
 }
 
 #[tokio::main]
@@ -135,6 +146,7 @@ async fn run() -> anyhow::Result<()> {
     let file = url_path.last().context("No file found in URL")?.to_owned();
     let path = url_path[..url_path.len() - 1].join("/");
 
+    let index = index::index_for(&url);
     let mut checksum = match args.checksum_source.hash_value {
         // The hash string was passed to the CLI with the flag --hash. We use it and
         // don't look for a file on a server.
@@ -145,6 +157,10 @@ async fn run() -> anyhow::Result<()> {
         // No hash value was passed as argument to the CLI with the --hash flag.
         // This means we need to look for the hash in a file.
         None => {
+            //if checksum_flag.asfaload_index {
+            //    log_info("Using asfaload index on mirror");
+            //    let checksum = asfaload_mirror::checksum(url);
+            //} else {
             log_info("Will for hash in a checksums file");
             // Create a hashmap with the path and file to be used in the templates
             let vars = HashMap::from([
@@ -198,6 +214,7 @@ async fn run() -> anyhow::Result<()> {
                     }
                 }
             }
+            //}
         }
     };
 

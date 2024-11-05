@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 use std::{collections::HashMap, path::Path, str::FromStr};
 
 use digest::{Digest, DynDigest};
@@ -122,7 +123,7 @@ pub struct ChecksumValidator {
 }
 
 impl ChecksumValidator {
-    fn new(algo: ChecksumAlgorithm, hash: &str) -> Self {
+    pub fn new(algo: ChecksumAlgorithm, hash: &str) -> Self {
         ChecksumValidator {
             hash: hash.to_owned(),
             digest: algo.into_digest(),
