@@ -8,6 +8,9 @@ use checksum::{Checksum, ChecksumValidator};
 use logger::helpers::log_warn;
 use once_cell::sync::Lazy;
 use url::Url;
+#[path = "./utils.rs"]
+mod utils;
+use utils::fetch_url;
 
 pub static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
     vec![
@@ -96,10 +99,6 @@ pub fn use_pattern_as_url_if_valid_scheme(url: &url::Url, pattern: &str) -> url:
             update_url_path(url, pattern)
         }
     }
-}
-
-pub async fn fetch_url(url: Url) -> Result<reqwest::Response, reqwest::Error> {
-    reqwest::get(url).await?.error_for_status()
 }
 
 // Returns a result of tuple (validator,url), so the url can be reported to the user
