@@ -35,6 +35,12 @@ static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
 {}
 
 {}
+By default, asfald will look at checksums mirrored at https://github.com/asfaload/checksums and
+using an asfaload indexing file.
+
+The previous behaviour, looking for checksums files under well known names, is still available, but
+is much less efficient and is strongly discouraged.
+
 The -p/--pattern <TEMPLATE> flag allows you to specify additional checksum file
 patterns to search for, beyond those that the app already looks for by default.
 You can repeat this option to search for multiple patterns.
@@ -110,11 +116,11 @@ struct ChecksumSource {
     #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
     asfaload_host: bool,
     #[arg(
-        short = 'i',
-        long = "asfaload-index",
-        value_name = "WITH_ASFALOAD_INDEX"
+        short = 'I',
+        long = "no-asfaload-index",
+        value_name = "WITHOUT_ASFALOAD_INDEX"
     )]
-    asfaload_index: bool,
+    no_asfaload_index: bool,
 }
 
 #[tokio::main]
@@ -156,7 +162,10 @@ async fn run() -> anyhow::Result<()> {
         // No hash value was passed as argument to the CLI with the --hash flag.
         // This means we need to look for the hash in a file.
         None => {
-            if checksum_flag.asfaload_index {
+            if !checksum_flag.asfaload_host
+                && checksum_flag.checksum_patterns.is_empty()
+                && !checksum_flag.no_asfaload_index
+            {
                 log_info("Using asfaload index on mirror");
                 let validator = index::checksum_for(&url).await?;
                 Some(validator)
