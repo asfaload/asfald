@@ -143,7 +143,7 @@ pub mod v1 {
         // Return all hashes found for the file, in the order of preference Sha512, Sha265, Sha1, Md5
         // WARNING: does not check consistency, though it signals it in the enum case returned.
         // For example could return 2 different Sha256 hashes found in different checksums files
-        pub fn all_hashes(&self, filename: &str) -> ChecksumsForFile {
+        pub fn all_hashes(&self, filename: &str) -> ChecksumsForFile<'_> {
             self.iter()
                 .file(filename)
                 .sort_by_algo()

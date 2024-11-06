@@ -21,7 +21,7 @@ pub fn index_for(url: &url::Url) -> url::Url {
 
 //pub async fn checksum_for(url: url::Url) -> Result<ChecksumValidator, reqwest::Error> {
 pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
-    let index_url = index_for(&url);
+    let index_url = index_for(url);
     let filename = url
         .path_segments()
         .unwrap()
@@ -49,12 +49,14 @@ mod asfaload_index_tests {
     use super::*;
     use anyhow::Result;
 
+    #[test]
     fn test_index_for() -> Result<()> {
         let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
-        let expected_index = "https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/.asfaload.index.json";
-        let host = asfaload_mirror::ASFALOAD_HOSTS.first().unwrap();
-        let mirror_url = asfaload_mirror::url_on_mirror(host, &download_url);
-        assert_eq!(mirror_url.to_string(), expected_index);
+        let possible_indexes = ["https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json","https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json"];
+        let mirror_url = index_for(&download_url);
+        assert!(possible_indexes
+            .iter()
+            .any(|i| *i == mirror_url.to_string().as_str()));
         Ok(())
     }
 }

@@ -27,7 +27,7 @@ pub struct AsfaloadHost<'a> {
 pub fn choose<'a>() -> &'a AsfaloadHost<'a> {
     ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap()
 }
-pub fn path_on_mirror(host: &AsfaloadHost, url: &url::Url) -> String {
+pub fn path_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> String {
     host
     // Tke the mirror's prefix
     .prefix
@@ -41,7 +41,7 @@ pub fn path_on_mirror(host: &AsfaloadHost, url: &url::Url) -> String {
     + url.path()
 }
 
-pub fn url_on_mirror(host: &AsfaloadHost, url: &url::Url) -> url::Url {
+pub fn url_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> url::Url {
     let path = path_on_mirror(host, url);
     url::Url::parse(format!("https://{}/{}", host.host, path).as_str())
         .context("Problem constructing url on mirror")
@@ -64,6 +64,7 @@ mod asfaload_mirror_tests {
         Ok(())
     }
 
+    #[test]
     fn test_url_on_mirror() -> Result<()> {
         let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
         let expected_on_mirror = "https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz";
