@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 use std::{collections::HashMap, path::Path, str::FromStr};
 
 use digest::{Digest, DynDigest};

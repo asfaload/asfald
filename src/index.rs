@@ -1,15 +1,8 @@
 // Code to user asfaload index files
-#[allow(dead_code)]
-// FIXME: why can't I use the asfaload_mirror module like the utils module?
-// Even when declaring the mod asfaload_mirror in lib.rs, I cannot use crate::asfaload_mirror....
-// But this causes a warning that asfload_mirror is loaded multiple times
-#[path = "asfaload_mirror.rs"]
-mod asfaload_mirror;
-use crate::checksum;
-use crate::checksum::ChecksumValidator;
-use crate::utils;
 mod json;
 use json::v1;
+
+use crate::{asfaload_mirror, checksum, checksum::ChecksumValidator, utils};
 
 const INDEX_NAME: &str = "asfaload.index.json";
 
@@ -46,8 +39,9 @@ pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
 #[cfg(test)]
 mod asfaload_index_tests {
 
-    use super::*;
     use anyhow::Result;
+
+    use super::*;
 
     #[test]
     fn test_index_for() -> Result<()> {

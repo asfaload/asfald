@@ -1,9 +1,15 @@
 /// A simple logger that writes error messages to stderr and other messages to stdout.
 use log::{LevelFilter, Log, Metadata, Record};
-#[allow(dead_code)]
+
 #[derive(Debug)]
 pub struct Logger {
     pub level: LevelFilter,
+}
+
+impl Default for Logger {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Logger {

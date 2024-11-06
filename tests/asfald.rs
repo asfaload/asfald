@@ -1,10 +1,10 @@
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
+
 use assert_cmd::prelude::*; // Add methods on commands
-use predicates::path::is_file;
-use predicates::prelude::*;
-use predicates::str::contains;
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::Command;
+use predicates::{path::is_file, prelude::*, str::contains};
 use testdir::testdir;
 
 const HTTP_HOST: &str = "http://localhost";

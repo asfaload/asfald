@@ -1,8 +1,7 @@
 use anyhow::Context;
-#[allow(dead_code)]
-// code regarding our checksums mirrors
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
@@ -15,6 +14,7 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
         },
     ]
 });
+
 #[derive(Clone)]
 pub struct AsfaloadHost<'a> {
     // Host on which our checksums are available, eg asfaload.github.io
@@ -51,8 +51,9 @@ pub fn url_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> url::Url {
 #[cfg(test)]
 mod asfaload_mirror_tests {
 
-    use super::*;
     use anyhow::Result;
+
+    use super::*;
 
     #[test]
     fn test_path_on_mirror() -> Result<()> {

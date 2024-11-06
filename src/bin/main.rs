@@ -1,6 +1,16 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use asfald::{
+    fetch_checksum, fetch_url, index,
+    logger::{
+        helpers::{
+            log_err, log_info, log_step, log_warn, DOWNLOAD, FOUND, INVALID, SEARCH, TRASH, VALID,
+        },
+        Logger,
+    },
+    update_url_asfaload_host, update_url_path, use_pattern_as_url_if_valid_scheme, Checksum,
+};
 use clap::{Args, Parser};
 use console::style;
 use futures::{future::select_ok, StreamExt};
@@ -13,22 +23,23 @@ use tokio::{
 };
 use url::Url;
 
-mod checksum;
-use checksum::Checksum;
-
-mod index;
-
-mod logger;
-use logger::helpers::{
-    log_err, log_info, log_step, log_warn, DOWNLOAD, FOUND, INVALID, SEARCH, TRASH, VALID,
-};
-use logger::Logger;
-
-mod utils;
-use utils::fetch_url;
-
-mod repo_checksums;
-use repo_checksums::*;
+static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
+    vec![
+        // Define checksum file patterns here. Variables are availabe to define the patterns:
+        //   - ${{path}}: The target URL path, excluding the filename.
+        //   - ${{file}}: The filename of the target URL.
+        //   - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
+        "${path}/CHECKSUM.txt".to_string(),
+        "${path}/checksum.txt".to_string(),
+        "${path}/CHECKSUMS.txt".to_string(),
+        "${path}/CHECKSUMS256.txt".to_string(),
+        "${path}/checksums.txt".to_string(),
+        "${path}/SHASUMS256.txt".to_string(),
+        "${path}/SHASUMS256".to_string(),
+        "${fullpath}.sha256sum".to_string(),
+        // TODO add more patterns
+    ]
+});
 
 static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
     format!("
@@ -193,7 +204,7 @@ async fn run() -> anyhow::Result<()> {
                         // Helper to build the replace the path of url by the path passed as argument
                         // Template is supposedly a full url
                         if pattern.starts_with("http") {
-                            repo_checksums::use_pattern_as_url_if_valid_scheme(&url, &pattern)
+                            use_pattern_as_url_if_valid_scheme(&url, &pattern)
                         }
                         // Look on our checksums mirrors
                         else if checksum_flag.asfaload_host {
@@ -305,6 +316,8 @@ async fn run() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod helpers_tests {
+    use asfald::handle_pattern;
+
     use super::*;
 
     #[test]

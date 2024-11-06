@@ -170,11 +170,11 @@ pub mod v1 {
 
 #[cfg(test)]
 mod lib_tests {
+    use anyhow::Result;
+    use chrono::DateTime;
     use v1::{AsfaloadIndex, ChecksumError, ChecksumsForFile};
 
     use super::*;
-    use anyhow::Result;
-    use chrono::DateTime;
 
     #[test]
     fn parse_json() -> Result<()> {
