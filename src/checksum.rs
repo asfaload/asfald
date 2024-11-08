@@ -16,6 +16,8 @@ pub enum ChecksumError {
 
 #[derive(Debug)]
 pub enum ChecksumAlgorithm {
+    MD5,
+    SHA1,
     SHA256,
     SHA512,
 }
@@ -23,6 +25,8 @@ pub enum ChecksumAlgorithm {
 impl ChecksumAlgorithm {
     fn infer(value: &str) -> Option<Self> {
         match value.len() {
+            32 => Some(ChecksumAlgorithm::MD5),
+            40 => Some(ChecksumAlgorithm::SHA1),
             64 => Some(ChecksumAlgorithm::SHA256),
             128 => Some(ChecksumAlgorithm::SHA512),
             _ => None,
@@ -31,6 +35,8 @@ impl ChecksumAlgorithm {
 
     fn into_digest(self) -> Box<dyn DynDigest> {
         match self {
+            ChecksumAlgorithm::MD5 => Box::new(md5::Md5::new()),
+            ChecksumAlgorithm::SHA1 => Box::new(sha1::Sha1::new()),
             ChecksumAlgorithm::SHA256 => Box::new(sha2::Sha256::new()),
             ChecksumAlgorithm::SHA512 => Box::new(sha2::Sha512::new()),
         }
@@ -116,7 +122,7 @@ pub struct ChecksumValidator {
 }
 
 impl ChecksumValidator {
-    fn new(algo: ChecksumAlgorithm, hash: &str) -> Self {
+    pub fn new(algo: ChecksumAlgorithm, hash: &str) -> Self {
         ChecksumValidator {
             hash: hash.to_owned(),
             digest: algo.into_digest(),
