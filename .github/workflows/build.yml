@@ -1,7 +1,9 @@
 name: Build executables
 
 # Manually trigger this action
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  workflow_call:
 
 env:
   CRATE_NAME: asfald

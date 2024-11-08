@@ -11,57 +11,6 @@ linux-static:
 check:
 	cargo rustc -- -D warnings
 
-## RELEASE step 1: Start our workflow generating artifacts.
-gh-build-binaries:
-	@echo "starting workflow"
-	gh workflow run .github/workflows/ci.yml
-	@echo "take note of the just started run"
-	gh run list
-	@echo "-------------------------------------------------------------------------"
-	@echo "now wait for the run to be finished, eg with make gh-wait-run RUN_ID=XXXX"
-	@echo "-------------------------------------------------------------------------"
-
-## RELEASE step 2: Wait for run RUN_ID to complete
-gh-wait-run:
-	[[ -n "$(RUN_ID)" ]] || { echo -2 "RUN_ID is required" ; exit 1; }
-	while [[ $$(gh run list --json databaseId,status -q '.[] | select (.databaseId==$(RUN_ID)).status') != "completed" ]]; do  \
-		echo "Waiting for run to completed"; \
-		sleep 10; \
-	done
-	@echo "---------------------------------------------------------------------------------"
-	@echo "now download the artifacts, eg with make gh-download-artifacts RUN_ID=$(RUN_ID)"
-	@echo "---------------------------------------------------------------------------------"
-
-## RELEASE step 3: Download all artifacts of run RUN_ID
-gh-download-artifacts:
-	[[ -n "$(RUN_ID)" ]] || { echo -2 "RUN_ID is required" ; exit 1; }
-	gh run download $(RUN_ID)
-	@echo "-------------------------------------------------------------------------"
-	@echo "now you can prepare the release locally, eg with make gh-prepare-release"
-	@echo "-------------------------------------------------------------------------"
-
-## RELEASE step 4: Create a release/ directory and generate files of a Github release in it.
-# Artifact downloads results in a hierarchy like 'asfald-x86_64-unknown-linux-musl/asfald'.
-# We create tgz files with these directories, but also make the asfald file itself available
-# under the same name as the directory.
-gh-prepare-release:
-	mkdir release; \
-  for dir in asfald-*; do \
-		cp LICENSE $$dir/; \
-		if [[ ! $$dir =~ windows ]]; then \
-			cp $$dir/asfald release/$$dir; \
-			chmod +x $$dir/asfald; \
-			tar zcvf release/$$dir.tar.gz $$dir; \
-		else \
-			zip -r release/$$dir.zip $$dir;\
-		fi; \
-		rm -r $${dir:?dir must be defined}; \
-	done; \
-	(cd release; sha256sum * > checksums.txt;)
-	@echo "-------------------------------------------------------------------------"
-	@echo "The release artifacts are available under release/"
-	@echo "-------------------------------------------------------------------------"
-
 # name of the tmux session running the http server started for the tests
 TMUX-SESSION := asfaload-test-http-server
 # shell command to detect if the tmux session exists
