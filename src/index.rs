@@ -46,7 +46,7 @@ mod asfaload_index_tests {
     #[test]
     fn test_index_for() -> Result<()> {
         let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
-        let possible_indexes = ["https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json","https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json"];
+        let possible_indexes = ["https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json","https://cf.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfaload.index.json"];
         let mirror_url = index_for(&download_url);
         assert!(possible_indexes
             .iter()
