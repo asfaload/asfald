@@ -9,7 +9,8 @@ use asfald::{
         },
         Logger,
     },
-    update_url_asfaload_host, update_url_path, use_pattern_as_url_if_valid_scheme, Checksum,
+    repo_checksums, update_url_asfaload_host, update_url_path, use_pattern_as_url_if_valid_scheme,
+    Checksum,
 };
 use clap::{Args, Parser};
 use console::style;
@@ -22,24 +23,6 @@ use tokio::{
     io::AsyncWriteExt,
 };
 use url::Url;
-
-static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
-    vec![
-        // Define checksum file patterns here. Variables are availabe to define the patterns:
-        //   - ${{path}}: The target URL path, excluding the filename.
-        //   - ${{file}}: The filename of the target URL.
-        //   - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
-        "${path}/CHECKSUM.txt".to_string(),
-        "${path}/checksum.txt".to_string(),
-        "${path}/CHECKSUMS.txt".to_string(),
-        "${path}/CHECKSUMS256.txt".to_string(),
-        "${path}/checksums.txt".to_string(),
-        "${path}/SHASUMS256.txt".to_string(),
-        "${path}/SHASUMS256".to_string(),
-        "${fullpath}.sha256sum".to_string(),
-        // TODO add more patterns
-    ]
-});
 
 static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
     format!("
@@ -194,7 +177,7 @@ async fn run() -> anyhow::Result<()> {
 
                 log_step(SEARCH, "Looking for checksum files...");
                 // Create a stream of checksum downloads
-                let checksums_patterns = CHECKSUMS_FILES
+                let checksums_patterns = repo_checksums::CHECKSUMS_FILES
                     .iter()
                     .chain(checksum_flag.checksum_patterns.iter())
                     // It is safe to unwrap as the only possible error is catched by the validate_vars above

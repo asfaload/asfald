@@ -1,8 +1,27 @@
 use anyhow::Context;
 use logger::helpers::log_warn;
+use once_cell::sync::Lazy;
 use url::Url;
 
 use crate::{asfaload_mirror, fetch_url, logger, Checksum, ChecksumValidator};
+
+pub static CHECKSUMS_FILES: Lazy<Vec<String>> = Lazy::new(|| {
+    vec![
+        // Define checksum file patterns here. Variables are availabe to define the patterns:
+        //   - ${{path}}: The target URL path, excluding the filename.
+        //   - ${{file}}: The filename of the target URL.
+        //   - ${{fullpath}}: The full path, which is the combination of ${{path}} and ${{file}}.
+        "${path}/CHECKSUM.txt".to_string(),
+        "${path}/checksum.txt".to_string(),
+        "${path}/CHECKSUMS.txt".to_string(),
+        "${path}/CHECKSUMS256.txt".to_string(),
+        "${path}/checksums.txt".to_string(),
+        "${path}/SHASUMS256.txt".to_string(),
+        "${path}/SHASUMS256".to_string(),
+        "${fullpath}.sha256sum".to_string(),
+        // TODO add more patterns
+    ]
+});
 
 // Return a new URL with the path updated
 pub fn update_url_asfaload_host(url: &Url) -> Url {

@@ -10,7 +10,7 @@ pub mod logger;
 mod utils;
 pub use utils::*;
 
-mod repo_checksums;
+pub mod repo_checksums;
 pub use repo_checksums::*;
 
 mod asfaload_mirror;
