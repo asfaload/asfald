@@ -94,16 +94,19 @@ pub fn use_pattern_as_url_if_valid_scheme(url: &url::Url, pattern: &str) -> url:
     }
 }
 
-// Returns a result of tuple (validator,url), so the url can be reported to the user
-pub async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<(ChecksumValidator, Url)> {
-    // Clone url as it is moved by fetch_url
-    let returned_url = url.clone();
-    let data = fetch_url(url)
+pub async fn fetch_checksum_url(url: url::Url) -> anyhow::Result<String, anyhow::Error> {
+    fetch_url(url)
         .await
         .context("Unable to fetch checksum file")?
         .text()
         .await
-        .context("Unable to find a checksum file")?;
+        .context("Unable to find a checksum file")
+}
+// Returns a result of tuple (validator,url), so the url can be reported to the user
+pub async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<(ChecksumValidator, Url)> {
+    // Clone url as it is moved by fetch_url
+    let returned_url = url.clone();
+    let data = fetch_checksum_url(url).await?;
 
     // Parse the file as a checksum:
     match data.parse::<Checksum>() {
