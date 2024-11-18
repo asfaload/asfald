@@ -8,10 +8,11 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
             host: "gh.checksums.asfaload.com",
             prefix: None,
         },
-        AsfaloadHost {
-            host: "cf.checksums.asfaload.com",
-            prefix: None,
-        },
+        // Disable cloudflare mirror as it doesn't build sites with more than 20000 files
+        //AsfaloadHost {
+        //    host: "cf.checksums.asfaload.com",
+        //    prefix: None,
+        //},
     ]
 });
 

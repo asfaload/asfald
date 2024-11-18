@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/asfaload/asfald/compare/v0.2.0...v0.3.0) (2024-11-08)
+
+
+### Features
+
+* add get_all_hashes ([96b6976](https://github.com/asfaload/asfald/commit/96b697627522a1ff43bd8aa29e42731dae6dd701))
+* add get_best_hash_for_file ([8e3c969](https://github.com/asfaload/asfald/commit/8e3c9698e9ec5638aaf1023c49579a405253ad8d))
+* add lib parsing asfaload index files ([6312d8e](https://github.com/asfaload/asfald/commit/6312d8e7df58e76a5592c2a6408650326a1084b2))
+* get_all_checksums indicates consistency with enum case ([2a30e26](https://github.com/asfaload/asfald/commit/2a30e26f776350f8b12845f5606985ba39c06e5c))
+* implement use of asfaload index files ([8b4bad4](https://github.com/asfaload/asfald/commit/8b4bad47c01405bd6d4c5d34c9ca82a7854efffc))
+* return Err if usable checksum not found ([3a9c016](https://github.com/asfaload/asfald/commit/3a9c0162e590a53d4dbfc30597a3db8c70c62081))
+* return struct and not only hash value when looking for a file's hash ([9d7c1b7](https://github.com/asfaload/asfald/commit/9d7c1b7c3c0e85c018509893e2a83d07fde341b9))
+* use asfaload indexes by default ([fc64e10](https://github.com/asfaload/asfald/commit/fc64e103330408d6cd4defad23faff9ff6afa73b))
+
+
+### Bug Fixes
+
+* index file is not hidden ([ff24cb6](https://github.com/asfaload/asfald/commit/ff24cb6f6f8fac772c8f57ff76ab9f069b44cfac))
+
 ## [0.2.0](https://github.com/asfaload/asfald/compare/v0.1.0...v0.2.0) (2024-10-17)
 
 
