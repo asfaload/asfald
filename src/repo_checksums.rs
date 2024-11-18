@@ -117,3 +117,10 @@ pub async fn fetch_checksum(url: Url, file: &str) -> anyhow::Result<(ChecksumVal
         Err(e) => anyhow::bail!("Failed to parse checksum file: {e:?}"),
     }
 }
+
+pub async fn file_checksum_from(url: Url, file: &str) -> Result<String, anyhow::Error> {
+    let data = fetch_checksum_url(url).await?;
+    let checksum = data.parse::<Checksum>()?;
+    let r = checksum.for_file(file)?;
+    Ok(r)
+}

@@ -2,7 +2,13 @@
 mod json;
 use json::v1;
 
-use crate::{asfaload_mirror, checksum, checksum::ChecksumValidator, utils};
+use crate::{
+    asfaload_mirror,
+    checksum::{self, ChecksumValidator},
+    file_checksum_from,
+    logger::helpers::log_info,
+    utils,
+};
 
 const INDEX_NAME: &str = "asfaload.index.json";
 
@@ -25,6 +31,16 @@ pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
     let hash = index
         .best_hash(filename)
         .expect("Didn't find checksum for file in index file");
+    let original_checksums_file_url = url.join(hash.source.as_str()).unwrap();
+    let release_checksum = file_checksum_from(original_checksums_file_url, hash.file_name.as_str())
+        .await
+        .unwrap();
+    if release_checksum != hash.hash {
+        anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+    } else {
+        log_info("Same checksum found in release");
+    }
+
     // FIXME: we should not duplicate algos types definitions. Needs a refactor of checksums.rs
     let checksum_algorithm = match hash.algo {
         v1::Algo::Sha256 => checksum::ChecksumAlgorithm::SHA256,
