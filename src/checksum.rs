@@ -64,6 +64,12 @@ impl Checksum {
         files.insert(filename.to_owned(), hash.to_owned());
         Ok(Checksum { algorithm, files })
     }
+    pub fn for_file(self, file: &str) -> Result<String, ChecksumError> {
+        self.files
+            .get(file)
+            .map(|h| h.to_owned())
+            .ok_or(ChecksumError::FileNamePart(file.to_string()))
+    }
 }
 
 fn handle_file_path(filename: &str) -> Result<&str, ChecksumError> {
