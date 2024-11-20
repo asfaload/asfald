@@ -13,7 +13,7 @@ digest = "0.10.7"
 envsubst = "0.2.1"
 futures = "0.3.31"
 hex = "0.4.3"
-indicatif = "0.17.8"
+indicatif = "0.17.9"
 log = { version = "0.4.22", features = ["std"] }
 md-5 = "0.10.6"
 reqwest = { version = "0.12.9", features = [
