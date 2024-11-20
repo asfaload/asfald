@@ -22,8 +22,12 @@ fn snd_url(path: &str) -> String {
 #[test]
 // Test successful download without any flag
 fn file_with_valid_checksum() {
+    let dir: PathBuf = testdir!();
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("the_local_file.txt"));
     cmd.arg(url("/valid/the_file.txt"));
     // spawn will display the output of the command
     //cmd.spawn().unwrap();
@@ -33,8 +37,8 @@ fn file_with_valid_checksum() {
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
-    assert!(is_file_pred.eval(Path::new("./the_file.txt")));
-    let _ = std::fs::remove_file("./the_file.txt");
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_local_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -60,6 +64,7 @@ fn file_with_valid_checksum_o() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     // Check the file was downloaded in the requested location
     assert!(is_file_pred.eval(Path::new(&dir.join("the_local_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -85,6 +90,7 @@ fn file_with_valid_checksum_p_url() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -110,6 +116,7 @@ fn file_with_valid_checksum_p_fullpath() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -135,6 +142,7 @@ fn file_with_valid_checksum_p_file_pattern() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -162,6 +170,7 @@ fn file_with_valid_checksum_p_path_pattern() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -187,6 +196,7 @@ fn file_p_pattern_with_http() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -208,6 +218,7 @@ fn file_with_valid_checksum_q() {
     let is_file_pred = is_file();
     // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -232,6 +243,7 @@ fn file_without_checksums_file() {
     let is_file_pred = is_file();
     // Check no file was downloaded
     assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -260,6 +272,7 @@ fn file_without_checksums_file_but_force_absent() {
     let is_file_pred = is_file();
     // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -288,6 +301,7 @@ fn file_without_checksums_file_but_force_invalid() {
     let is_file_pred = is_file();
     // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -334,8 +348,12 @@ fn file_with_invalid_checksum_force_invalid() {
 #[test]
 // Test successful download without any flag
 fn file_with_path_and_valid_checksum() {
+    let dir: PathBuf = testdir!();
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("the_local_file.txt"));
     cmd.arg(url("/checksums_with_path/the_file.txt"));
     // spawn will display the output of the command
     //cmd.spawn().unwrap();
@@ -345,15 +363,19 @@ fn file_with_path_and_valid_checksum() {
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
-    assert!(is_file_pred.eval(Path::new("./the_file.txt")));
-    let _ = std::fs::remove_file("./the_file.txt");
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_local_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
 // Test successful download without any flag
 fn file_with_binary_indicator() {
+    let dir: PathBuf = testdir!();
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("the_local_file.txt"));
     cmd.arg(url("/checksums_with_binary_indicator/the_file.txt"));
     cmd.assert()
         .success()
@@ -361,8 +383,8 @@ fn file_with_binary_indicator() {
         .stdout(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
-    assert!(is_file_pred.eval(Path::new("./the_file.txt")));
-    let _ = std::fs::remove_file("./the_file.txt");
+    assert!(is_file_pred.eval(Path::new(&dir.join("the_local_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -450,6 +472,7 @@ fn cli_with_hash_flag() {
 
     // Check no file was downloaded
     assert!(!is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -471,4 +494,5 @@ fn cli_with_hash_and_p_flags() {
     cmd.assert().failure().stderr(contains(
         "error: the argument \'--hash <HASH>\' cannot be used with \'--pattern <TEMPLATE>\'",
     ));
+    let _ = std::fs::remove_dir(dir);
 }
