@@ -1,16 +1,13 @@
 # About
 
 `asfald` is a command line downloader which validates the integrity of the downloaded file against a checksums file mirrored in a separate git repository (https://github.com/asfaload/checksums).
-Currently the checksum file is mirrored as soon as possible for Github repositories watched by Asfaload, but very soon you will be able to notify of the publication of a new release with checksum file, for other hosting solutions ([Gitlab](https://gitlab.com), [Forgejo](https://forgejo.org/), http).
+Currently the checksum file is mirrored as soon as possible for Github repositories watched by Asfaload or those notifying us with the Github Action [notify-release-action](https://github.com/marketplace/actions/notify-new-release-to-asfaload), but very soon you will be able to notify of the publication of a new release with checksum file, for other hosting solutions ([Gitlab](https://gitlab.com), [Forgejo](https://forgejo.org/), http).
 
 
-Publishing a checksums file alongisde a file proposed for download is done by numerous projects in their releases (see for example [Lazygit](https://github.com/jesseduffield/lazydocker), [mise](https://github.com/jdx/mise), [watchexec](https://github.com/watchexec/watchexec), [Github's CLI](https://github.com/cli/cli/), [act](https://github.com/nektos/act/releases/tag/v0.2.66)(run Github Actions locally),[neovim](https://github.com/neovim/neovim), ...).
-
-Note however that **using a checksums file stored on the same server as the downloaded file has no security benefit**, it only ensure the file you have wasn't corrupted in transit.
-Using a checksum file on a mirror increases security as two locations have to be compromised to serve you malevolent content.
+Publishing a checksums file alongisde a file proposed for download is done by numerous projects in their releases (see for example [Lazygit](https://github.com/jesseduffield/lazydocker), [mise](https://github.com/jdx/mise), [watchexec](https://github.com/watchexec/watchexec), [Github's CLI](https://github.com/cli/cli/), [act](https://github.com/nektos/act/releases/tag/v0.2.66)(run Github Actions locally),[neovim](https://github.com/neovim/neovim), ...) but  **using a checksums file stored on the same server as the downloaded file has no security benefit**, it only ensures the file you have downloaded wasn't corrupted in transit.
+Using a checksum file on a mirror in addition to its original location increases security as two locations have to be compromised to serve you malevolent content.
 
 We are already mirroring checksum files for more than 1200 projects.
-
 
 You can get `asfald` by downloading it from its Github releases (see below how to secure the initial download) or by building it yourself.
 
@@ -37,16 +34,17 @@ chmod +x ~/local/bin/asfald
 ```
 Subsequent downloads can be done with `asfald` itself. For example when downloading the FreeBSD version of `asfald`, you get this output:
 ```
-asfald https://github.com/asfaload/asfald/releases/download/v0.3.0/asfald-x86_64-unknown-freebsd.tar.gz
 INFO ℹ️ Using asfaload index on mirror
+INFO ℹ️ Same checksum found in release
 INFO 🗑️ Create temporary file...
 INFO 🚚 Downloading file...
-  [00:00:00] [###################################################################################################################################################] 1.90 MiB/1.90 MiB (00:00:00)INFO ✅ File's checksum is valid !
+  [00:00:00] [########################################################################] 1.99 MiB/1.99 MiB (00:00:00)
+INFO ✅ File's checksum is valid !
 ```
 # Using asfald
 
 ## On the command line
-Using `asfald` is easy: just call it with the file to be downloaded's URL as argument. For example:
+As seen above, using `asfald` is easy: just call it with the file to be downloaded's URL as argument. For example:
 ```
 asfald https://github.com/asfaload/asfald/releases/download/v0.3.0/asfald-x86_64-unknown-freebsd.tar.gz
 ```
@@ -65,7 +63,7 @@ fi
 
 ## In Dockerfiles
 
-You can safely download and install `asfald` in your linux containers by adding this snippet to your `Dockerfile` (you can choose the version to install by modifying the value of `asfald_version` on the first line), the only requirement is to have `curl` installed available:
+You can safely download and install `asfald` in your linux containers by adding this snippet to your `Dockerfile` (you can choose the version to install by modifying the value of `asfald_version` on the first line), the only requirement is to have `curl` installed:
 ```
 RUN bash -c 'asfald_version=v0.3.0 && \
     curl --silent  -L -O https://github.com/asfaload/asfald/releases/download/${asfald_version}/asfald-x86_64-unknown-linux-musl && \
@@ -101,7 +99,7 @@ docker run -it --rm 0f8748 --help
 
 # Asfald's inner working
 
-We collect checksums files in our repo at https://github.com/asfaload/checksums, which is used to publish a Github pages site at https://gh.checksums.asfaload.com and a Cloudflare pages site at https://cf.checksums.asfaload.com. The path to the checksums file is the same as its original url, without the scheme part(i.e. without `https://`).
+We collect checksums files in our repo at https://github.com/asfaload/checksums, which is used to publish a Github pages site at https://gh.checksums.asfaload.com. The path to the checksums file is the same as its original url, without the scheme part(i.e. without `https://`).
 For example, the original URL for the checksums file of asfald's v0.3.0 release, is at https://github.com/asfaload/asfald/releases/download/v0.3.0/checksums.txt, and its location on the mirror is https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/checksums.txt.
 
 There's no accepted standard for naming the checksums file. For example, when downloading a neovim release with url `https://github.com/neovim/neovim/releases/download/v0.10.2/nvim-linux64.tar.gz`, the checkum file is named ` nvim-linux64.tar.gz.sha256sum`, when downloading a mise release from `https://github.com/jdx/mise/releases/tag/v2024.11.4`, the checksums file name is `SHASUMS256.txt`.
@@ -132,6 +130,8 @@ Here is the top of that file for asfald's v0.3.0 release:
 ```
 
 This information makes the checksums mirror fully auditable.
+
+When downloading a file, `asfald` downloads the checksums file from both the mirror and its original location. If an inconsistency is detected between both files an error is raised.
 
 # Building
 
