@@ -86,3 +86,14 @@ jobs:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
       - name: Make release visible
         run: gh -R ${{ github.repository }} release edit ${{ needs.release-please.outputs.tag_name }} --draft=false
+
+  notify-asfaload:
+    runs-on: ubuntu-latest
+    needs: [publish-release]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      # Required to get an OIDC token. Doesn't grant any write access.
+      id-token: write
+    steps:
+      - name: Notify new release to Asfaload
+        uses: asfaload/notify-release-action@v0.1.0
