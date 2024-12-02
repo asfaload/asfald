@@ -2,9 +2,27 @@ use anyhow::Context;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 
+#[derive(Clone)]
+pub enum MirrorProtocol {
+    Https,
+}
+impl std::fmt::Display for MirrorProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        let s = match self {
+            MirrorProtocol::Https => "https",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
+            protocol: MirrorProtocol::Https,
             host: "gh.checksums.asfaload.com",
             prefix: None,
         },
@@ -16,8 +34,13 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     ]
 });
 
+trait AsfaloadHostsChooser {
+    fn choose<'a>() -> &'a AsfaloadHost<'a>;
+}
+
 #[derive(Clone)]
 pub struct AsfaloadHost<'a> {
+    pub protocol: MirrorProtocol,
     // Host on which our checksums are available, eg asfaload.github.io
     pub host: &'a str,
     // The prefix to add to the path to the checksums file compared to the original path, eg
@@ -44,7 +67,7 @@ pub fn path_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> String {
 
 pub fn url_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> url::Url {
     let path = path_on_mirror(host, url);
-    url::Url::parse(format!("https://{}/{}", host.host, path).as_str())
+    url::Url::parse(format!("{}://{}/{}", host.protocol, host.host, path).as_str())
         .context("Problem constructing url on mirror")
         .unwrap()
 }
