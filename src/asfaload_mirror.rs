@@ -5,7 +5,12 @@ use rand::seq::SliceRandom;
 #[derive(Clone)]
 pub enum MirrorProtocol {
     Https,
+    // We only allow the http protocol for tests.
+    // This variant is not available in code not running in tests
+    #[cfg(test)]
+    Http,
 }
+
 impl std::fmt::Display for MirrorProtocol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Write strictly the first element into the supplied output
@@ -14,11 +19,23 @@ impl std::fmt::Display for MirrorProtocol {
         // is very similar to `println!`.
         let s = match self {
             MirrorProtocol::Https => "https",
+            // As the Http variant is only available in tests, we mark this
+            // branch of the match as only compiled in tests
+            #[cfg(test)]
+            MirrorProtocol::Http => "http",
         };
         write!(f, "{}", s)
     }
 }
 
+// This is the definition of asfaload hosts in production. It should not be
+// available in tests.
+// Note that I get the warning "code is inactive due to #[cfg] directives: test is enabled"
+// because the rust analyzer needs to enable tests IIUC.
+// This code is only available when compiling asfald outside of tests.
+// Not setting the cfg prevents compiling and achieving our goal to have different hosts in tests
+// as well as preventing the use of the HTTP protocol in production.
+#[cfg(not(test))]
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
@@ -34,9 +51,23 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     ]
 });
 
-trait AsfaloadHostsChooser {
-    fn choose<'a>() -> &'a AsfaloadHost<'a>;
-}
+// This is the definition of asfaload hosts for tests, allowing to test all functionality
+// against a test-specific mirror on localhost
+#[cfg(test)]
+pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
+    vec![
+        AsfaloadHost {
+            protocol: MirrorProtocol::Http,
+            host: "localhost:9898",
+            prefix: None,
+        },
+        AsfaloadHost {
+            protocol: MirrorProtocol::Http,
+            host: "localhost:9899",
+            prefix: None,
+        },
+    ]
+});
 
 #[derive(Clone)]
 pub struct AsfaloadHost<'a> {
@@ -92,7 +123,7 @@ mod asfaload_mirror_tests {
     #[test]
     fn test_url_on_mirror() -> Result<()> {
         let download_url = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
-        let expected_on_mirror = "https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz";
+        let expected_on_mirror = "http://localhost:9898/github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz";
         let host = ASFALOAD_HOSTS.first().unwrap();
         let mirror_url = url_on_mirror(host, &download_url);
         assert_eq!(mirror_url.to_string(), expected_on_mirror);

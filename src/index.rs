@@ -93,7 +93,7 @@ badaee9802db53c23a65107bcc1505237f4aaf6d75925829ba3383af90559c95  asfald-x86_64-
     #[test]
     fn test_index_for() -> Result<()> {
         let download_url = url::Url::parse(DOWNLOAD_ADDRESS)?;
-        let possible_indexes = ["https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json","https://cf.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json"];
+        let possible_indexes = ["http://localhost:9898/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json","http://localhost:9899/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json"];
         let mirror_url = index_for(&download_url);
         assert!(possible_indexes
             .iter()
