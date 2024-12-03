@@ -7,7 +7,7 @@ pub enum MirrorProtocol {
     Https,
     // We only allow the http protocol for tests.
     // This variant is not available in code not running in tests
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testing"))]
     Http,
 }
 
@@ -21,7 +21,7 @@ impl std::fmt::Display for MirrorProtocol {
             MirrorProtocol::Https => "https",
             // As the Http variant is only available in tests, we mark this
             // branch of the match as only compiled in tests
-            #[cfg(test)]
+            #[cfg(any(test, feature = "testing"))]
             MirrorProtocol::Http => "http",
         };
         write!(f, "{}", s)
@@ -35,7 +35,7 @@ impl std::fmt::Display for MirrorProtocol {
 // This code is only available when compiling asfald outside of tests.
 // Not setting the cfg prevents compiling and achieving our goal to have different hosts in tests
 // as well as preventing the use of the HTTP protocol in production.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "testing")))]
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {
@@ -53,7 +53,7 @@ pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
 
 // This is the definition of asfaload hosts for tests, allowing to test all functionality
 // against a test-specific mirror on localhost
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub static ASFALOAD_HOSTS: Lazy<Vec<AsfaloadHost<'_>>> = Lazy::new(|| {
     vec![
         AsfaloadHost {

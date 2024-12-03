@@ -33,8 +33,9 @@ stop-test-server:
 	$(TMUX-SESSION-MIRROR_2) && tmux kill-session -t "$(TMUX-MIRROR)_2" || true
 
 ## Starts a local http server in tmux and run the tests, before stopping the server.
+## Select the test to run with FILTER=test_name
 test: start-test-server
-	cargo test
+	cargo test -F testing $(FILTER)
 	$(MAKE) stop-test-server
 
 
