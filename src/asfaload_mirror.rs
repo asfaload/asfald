@@ -82,6 +82,18 @@ pub struct AsfaloadHost<'a> {
 pub fn choose<'a>() -> &'a AsfaloadHost<'a> {
     ASFALOAD_HOSTS.choose(&mut rand::thread_rng()).unwrap()
 }
+
+fn port_in_path_for(url: &url::Url) -> String {
+    match (url.scheme(), url.port()) {
+        ("https", None) => "".to_string(),
+        ("http", None) => ":80".to_string(),
+        (_, Some(p)) => [":".to_string(), p.to_string()].concat(),
+        (proto, None) => {
+            println!("protocol {} not supported", proto.to_string().as_str());
+            panic!("Unsupported protocol")
+        }
+    }
+}
 pub fn path_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> String {
     host
     // Tke the mirror's prefix
@@ -92,6 +104,8 @@ pub fn path_on_mirror(host: &AsfaloadHost<'_>, url: &url::Url) -> String {
     .unwrap_or_default()
     // Put the host in the path
     + &url.host().unwrap().to_string()
+    //+ &url.port().map(|p| if p== 443 { None} else { Some(p.to_string().to_owned())}).flatten().unwrap_or("".to_string())
+    + port_in_path_for(url).as_str()
     // Followed by the full original path
     + url.path()
 }
@@ -128,5 +142,29 @@ mod asfaload_mirror_tests {
         let mirror_url = url_on_mirror(host, &download_url);
         assert_eq!(mirror_url.to_string(), expected_on_mirror);
         Ok(())
+    }
+
+    #[test]
+    fn test_port_in_path_for() -> Result<()> {
+        let https_without_port = url::Url::parse("https://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        let http_without_port = url::Url::parse("http://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        let https_with_port = url::Url::parse("https://github.com:8443/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        let http_with_port = url::Url::parse("http://github.com:8999/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz")?;
+        assert_eq!(port_in_path_for(&https_without_port), "");
+        assert_eq!(port_in_path_for(&http_without_port), ":80");
+        assert_eq!(port_in_path_for(&https_with_port), ":8443");
+        assert_eq!(port_in_path_for(&http_with_port), ":8999");
+        Ok(())
+    }
+    #[test]
+    #[should_panic]
+    fn test_port_in_path_for_unknown_protocol() {
+        let url_with_unknown_proto_result = url::Url::parse("foo://github.com/asfaload/asfald/releases/download/v0.2.0/asfald-x86_64-unknown-linux-musl.tar.gz");
+        match url_with_unknown_proto_result {
+            Err(_e) => println!("Unexpectedly couldn't parse url"),
+            Ok(url) => {
+                let _v = port_in_path_for(&url);
+            }
+        }
     }
 }
