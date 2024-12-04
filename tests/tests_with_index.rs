@@ -54,3 +54,22 @@ fn file_with_invalid_chksum_on_mirror() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("invalid_chksum_on_mirror"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn file_with_updated_chksum_in_release() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/chksum_modified_in_release",
+    ));
+    cmd.assert().failure().stderr(contains(
+        "Checksum found on mirror is different from checksum found in release.",
+    ));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}
