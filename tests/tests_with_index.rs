@@ -35,3 +35,22 @@ fn file_with_valid_index_entry() {
     assert!(is_file_pred.eval(Path::new(&dir.join("f01"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn file_with_invalid_chksum_on_mirror() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("invalid_chksum_on_mirror"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/invalid_chksum_on_mirror",
+    ));
+    cmd.assert().failure().stderr(contains(
+        "Checksum found on mirror is different from checksum found in release.",
+    ));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("invalid_chksum_on_mirror"))));
+    let _ = std::fs::remove_dir(dir);
+}
