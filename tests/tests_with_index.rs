@@ -53,6 +53,25 @@ fn file_with_invalid_chksum_on_mirror() {
     let is_file_pred = is_file();
     assert!(!is_file_pred.eval(Path::new(&dir.join("invalid_chksum_on_mirror"))));
     let _ = std::fs::remove_dir(dir);
+
+    // When we force download despite invalid checksums, we still download the file
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("--force-invalid");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/invalid_chksum_on_mirror",
+    ));
+    cmd.assert()
+        .success()
+        .stderr(contains("File's checksum is invalid !"))
+        .stderr(contains("but continuing due to --force-invalid flag"));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
@@ -71,5 +90,45 @@ fn file_with_updated_chksum_in_release() {
 
     let is_file_pred = is_file();
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+
+    // When we force download despite invalid checksums, we still download the file
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("--force-invalid");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/chksum_modified_in_release",
+    ));
+    cmd.assert().success().stderr(contains(
+        "Checksum found in release is different, but continuing as --force-invalid flag found",
+    ));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}
+
+#[test]
+fn file_with_updated_sha256_in_release() {
+    // For this download, we use the best checksum available, which is sha512, and we do
+    // not look to sha256. As for sha512 checksums match on mirror and in release, we proceed
+    // and the download is sucessful
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/updated_sha256_in_release",
+    ));
+    cmd.assert()
+        .success()
+        .stderr(contains("File\'s checksum is valid !"));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }

@@ -164,7 +164,7 @@ async fn run() -> anyhow::Result<()> {
                 && !checksum_flag.no_asfaload_index
             {
                 log_info("Using asfaload index on mirror");
-                let validator = index::checksum_for(&url).await?;
+                let validator = index::checksum_for(&url, args.force_invalid).await?;
                 Some(validator)
             } else {
                 log_info("Will for hash in a checksums file");

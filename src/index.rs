@@ -6,7 +6,7 @@ use crate::{
     asfaload_mirror,
     checksum::{self, ChecksumValidator},
     file_checksum_from,
-    logger::helpers::log_info,
+    logger::helpers::{log_info, log_warn},
     utils,
 };
 
@@ -24,8 +24,8 @@ pub fn original_checksums_file_for(
 ) -> url::Url {
     download_url.join(file_checksum.source.as_str()).unwrap()
 }
-//pub async fn checksum_for(url: url::Url) -> Result<ChecksumValidator, reqwest::Error> {
-pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
+// optional indicates if we continue even if we cannot validated the checksum
+pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<ChecksumValidator> {
     let index_url = index_for(url);
     let filename = url
         .path_segments()
@@ -43,7 +43,11 @@ pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
             .await
             .unwrap();
     if release_checksum != hash_info.hash {
-        anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+        if optional {
+            log_warn("Checksum found in release is different, but continuing as --force-invalid flag found");
+        } else {
+            anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+        }
     } else {
         log_info("Same checksum found in release");
     }
