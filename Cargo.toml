@@ -5,6 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+# The testing feature is used to be able to build the binary using local mirrors as needed for tests.
+# Using the cfg(test) was not sufficient, as it seems the build of the binary occurs outside of test.
+# The solution was outlined at https://users.rust-lang.org/t/building-binary-for-tests-with-cfg-test/121984/2
+# It requires to define the feature "testing", to run the tests with cargo test -F testing, and
+# to set the attribute `#[cfg(any(test, feature = "testing"))]` for test only code and the attribute
+# `#[cfg(not(any(test, feature = "testing")))]` for production only code
+testing = []
+
 [dependencies]
 anyhow = "1.0.93"
 clap = { version = "4.5.21", features = ["derive"] }
