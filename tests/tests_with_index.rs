@@ -151,3 +151,22 @@ fn file_ok_on_server_not_in_index() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn file_without_index() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/release-without-index/file_without_index",
+    ));
+    cmd.assert().failure().stderr(contains(
+        "Problem getting asfalod index file, is the project tracked by asfaload?",
+    ));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}

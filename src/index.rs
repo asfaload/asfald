@@ -33,7 +33,12 @@ pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<Chec
         .unwrap()
         .last()
         .expect("Cannot extract filename from url");
-    let response = utils::fetch_url(index_url).await?.error_for_status()?;
+    let response = utils::fetch_url(index_url)
+        .await
+        .map_err(|e|
+            {let error_msg=format!("Problem getting asfalod index file, is the project tracked by asfaload?\nOriginal error: {}",e);
+             anyhow::Error::msg(error_msg)})?
+        .error_for_status()?;
     let index: v1::AsfaloadIndex = response.json().await?;
     let hash_info = index
         .best_hash(filename)
