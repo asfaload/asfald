@@ -1,5 +1,6 @@
 // Code to user asfaload index files
 mod json;
+use anyhow::Context;
 use json::v1::{self, FileChecksum};
 
 use crate::{
@@ -36,7 +37,7 @@ pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<Chec
     let index: v1::AsfaloadIndex = response.json().await?;
     let hash_info = index
         .best_hash(filename)
-        .expect("Didn't find checksum for file in index file");
+        .context("Didn't find checksum for file in index file")?;
     let original_checksums_file_url = original_checksums_file_for(url, hash_info);
     let release_checksum =
         file_checksum_from(original_checksums_file_url, hash_info.file_name.as_str())
