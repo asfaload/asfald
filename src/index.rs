@@ -1,12 +1,13 @@
 // Code to user asfaload index files
 mod json;
+use anyhow::Context;
 use json::v1::{self, FileChecksum};
 
 use crate::{
     asfaload_mirror,
     checksum::{self, ChecksumValidator},
     file_checksum_from,
-    logger::helpers::log_info,
+    logger::helpers::{log_info, log_warn},
     utils,
 };
 
@@ -24,26 +25,35 @@ pub fn original_checksums_file_for(
 ) -> url::Url {
     download_url.join(file_checksum.source.as_str()).unwrap()
 }
-//pub async fn checksum_for(url: url::Url) -> Result<ChecksumValidator, reqwest::Error> {
-pub async fn checksum_for(url: &url::Url) -> anyhow::Result<ChecksumValidator> {
+// optional indicates if we continue even if we cannot validated the checksum
+pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<ChecksumValidator> {
     let index_url = index_for(url);
     let filename = url
         .path_segments()
         .unwrap()
         .last()
         .expect("Cannot extract filename from url");
-    let response = utils::fetch_url(index_url).await?.error_for_status()?;
+    let response = utils::fetch_url(index_url)
+        .await
+        .map_err(|e|
+            {let error_msg=format!("Problem getting asfalod index file, is the project tracked by asfaload?\nOriginal error: {}",e);
+             anyhow::Error::msg(error_msg)})?
+        .error_for_status()?;
     let index: v1::AsfaloadIndex = response.json().await?;
     let hash_info = index
         .best_hash(filename)
-        .expect("Didn't find checksum for file in index file");
+        .context("Didn't find checksum for file in index file")?;
     let original_checksums_file_url = original_checksums_file_for(url, hash_info);
     let release_checksum =
         file_checksum_from(original_checksums_file_url, hash_info.file_name.as_str())
             .await
             .unwrap();
     if release_checksum != hash_info.hash {
-        anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+        if optional {
+            log_warn("Checksum found in release is different, but continuing as --force-invalid flag found");
+        } else {
+            anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+        }
     } else {
         log_info("Same checksum found in release");
     }
@@ -93,7 +103,7 @@ badaee9802db53c23a65107bcc1505237f4aaf6d75925829ba3383af90559c95  asfald-x86_64-
     #[test]
     fn test_index_for() -> Result<()> {
         let download_url = url::Url::parse(DOWNLOAD_ADDRESS)?;
-        let possible_indexes = ["https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json","https://cf.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json"];
+        let possible_indexes = ["http://localhost:9898/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json","http://localhost:9899/github.com/asfaload/asfald/releases/download/v0.3.0/asfaload.index.json"];
         let mirror_url = index_for(&download_url);
         assert!(possible_indexes
             .iter()
