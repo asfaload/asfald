@@ -99,7 +99,7 @@ docker run -it --rm 0f8748 --help
 
 # Asfald's inner working
 
-We collect checksums files in our repo at https://github.com/asfaload/checksums, which is used to publish a Github pages site at https://gh.checksums.asfaload.com. The path to the checksums file is the same as its original url, without the scheme part(i.e. without `https://`).
+We collect checksums files in our repo at https://github.com/asfaload/checksums, which is used to publish a Github pages site at https://gh.checksums.asfaload.com. The path to the checksums file is the same as its original url, without the scheme part(i.e. without `https://`). If the url includes the port 443 it is not included in the path. All other ports are present in the path.
 For example, the original URL for the checksums file of asfald's v0.3.0 release, is at https://github.com/asfaload/asfald/releases/download/v0.3.0/checksums.txt, and its location on the mirror is https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/checksums.txt.
 
 There's no accepted standard for naming the checksums file. For example, when downloading a neovim release with url `https://github.com/neovim/neovim/releases/download/v0.10.2/nvim-linux64.tar.gz`, the checkum file is named ` nvim-linux64.tar.gz.sha256sum`, when downloading a mise release from `https://github.com/jdx/mise/releases/tag/v2024.11.4`, the checksums file name is `SHASUMS256.txt`.

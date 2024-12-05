@@ -37,12 +37,7 @@ impl Log for Logger {
 
     fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
-            // Write to stderr if the log level is Error,
-            // otherwise write to stdout:
-            match record.level() {
-                log::Level::Error => eprintln!("{} {}", record.level(), record.args()),
-                _ => println!("{} {}", record.level(), record.args()),
-            }
+            eprintln!("{} {}", record.level(), record.args());
         }
     }
 
