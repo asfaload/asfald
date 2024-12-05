@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write};
 
 use anyhow::Context;
 use asfald::{
@@ -18,22 +18,25 @@ use futures::{future::select_ok, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::LevelFilter;
 use once_cell::sync::Lazy;
+
 use tokio::{
     fs::{self, File},
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
 };
 use url::Url;
-
 static EXAMPLE_HELP: Lazy<String> = Lazy::new(|| {
     format!("
 {}
 
 {}
 By default, asfald will look at checksums mirrored at https://github.com/asfaload/checksums and
-using an asfaload indexing file.
+use an asfaload indexing file.
 
 The previous behaviour, looking for checksums files under well known names, is still available, but
 is much less efficient and is strongly discouraged.
+
+The -o <PATH> flag allows to save the file in a particular location. If <PATH> is the single character -,
+the downloaded file is sent to standard output after validation.
 
 The -p/--pattern <TEMPLATE> flag allows you to specify additional checksum file
 patterns to search for, beyond those that the app already looks for by default.
@@ -290,9 +293,20 @@ async fn run() -> anyhow::Result<()> {
 
     // Move the temporary file to the destination file
     let dest_file = args.output.unwrap_or(file);
-    fs::rename(temp_file_path, &dest_file)
-        .await
-        .context(format!("Unable to move the temporary file to {dest_file}"))?;
+    if dest_file == "-" {
+        let mut f = File::open(temp_file_path).await?;
+        let mut buffer = [0; 100_000];
+        let mut bytes_read = f.read(&mut buffer).await?;
+        while bytes_read > 0 {
+            std::io::stdout().write_all(&buffer[0..bytes_read]).unwrap();
+            bytes_read = f.read(&mut buffer).await?;
+        }
+        std::io::stdout().flush().unwrap();
+    } else {
+        fs::rename(temp_file_path, &dest_file)
+            .await
+            .context(format!("Unable to move the temporary file to {dest_file}"))?;
+    }
 
     Ok(())
 }
