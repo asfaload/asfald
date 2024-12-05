@@ -141,6 +141,7 @@ async fn run() -> anyhow::Result<()> {
     };
     Logger::new().with_level(log_level).init().unwrap();
 
+    let response = fetch_url(url.clone()).await.context("Download failed")?;
     let url_path = url
         .path_segments()
         .map(|c| c.map(|s| s.to_owned()).collect::<Vec<_>>())
@@ -237,7 +238,6 @@ async fn run() -> anyhow::Result<()> {
     log_step(DOWNLOAD, "Downloading file...");
 
     // Download the file form url and while downloading compute the checksum:
-    let response = fetch_url(url).await.context("Download failed")?;
 
     let file_size = response.content_length();
     let mut data = response.bytes_stream();
