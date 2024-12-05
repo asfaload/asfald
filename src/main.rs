@@ -149,9 +149,11 @@ async fn run() -> anyhow::Result<()> {
         .await
         .map_err(|e| {
             let error_msg = format!(
-                "File to download not found.\nOriginal error: {}\nSource: {}",
+                "File to download not found.\nOriginal error: {}{}",
                 e,
-                e.source().unwrap()
+                e.source()
+                    .map(|s| "\n Source: ".to_string() + s.to_string().as_str())
+                    .unwrap_or("".to_string())
             );
             anyhow::Error::msg(error_msg)
         })?

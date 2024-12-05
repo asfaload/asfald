@@ -513,3 +513,22 @@ fn host_unreachable() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn inexisting_file() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg("http://localhost:9898/inexisting");
+    cmd.assert()
+        .failure()
+        .stderr(contains("File to download not found."))
+        .stderr(contains("Original error: HTTP status client error (404 Not Found) for url (http://localhost:9898/inexisting)"))
+        .stderr(contains("Source: ").not());
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}
