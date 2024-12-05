@@ -494,3 +494,22 @@ fn cli_with_hash_and_p_flags() {
     ));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn host_unreachable() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg("https://blurps.asfaload.com/foo/bar/nil/f.tgz");
+    cmd.assert()
+        .failure()
+        .stderr(contains("File to download not found."))
+        .stderr(contains("Original error: error sending request for url (https://blurps.asfaload.com/foo/bar/nil/f.tgz)"))
+        .stderr(contains("Source: client error (Connect)"));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}

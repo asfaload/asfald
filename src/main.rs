@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Write};
+use std::{collections::HashMap, error::Error, io::Write};
 
 use anyhow::Context;
 use asfald::{
@@ -141,7 +141,21 @@ async fn run() -> anyhow::Result<()> {
     };
     Logger::new().with_level(log_level).init().unwrap();
 
-    let response = fetch_url(url.clone()).await.context("Download failed")?;
+    // Issue download request so a request to download an inexisting file
+    // can be reported before we report a missing asfaload index file.
+    // The response object is used much lower in the code, after we get
+    // the asfaload index file.
+    let response = fetch_url(url.clone())
+        .await
+        .map_err(|e| {
+            let error_msg = format!(
+                "File to download not found.\nOriginal error: {}\nSource: {}",
+                e,
+                e.source().unwrap()
+            );
+            anyhow::Error::msg(error_msg)
+        })?
+        .error_for_status()?;
     let url_path = url
         .path_segments()
         .map(|c| c.map(|s| s.to_owned()).collect::<Vec<_>>())
