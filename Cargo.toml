@@ -16,7 +16,7 @@ testing = []
 
 [dependencies]
 anyhow = "1.0.94"
-clap = { version = "4.5.22", features = ["derive"] }
+clap = { version = "4.5.23", features = ["derive"] }
 console = "0.15.8"
 digest = "0.10.7"
 envsubst = "0.2.1"
