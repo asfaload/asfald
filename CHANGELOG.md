@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/asfaload/asfald/compare/v0.4.0...v0.5.0) (2024-12-09)
+
+
+### Features
+
+* send to stdout if filename is - ([f05b2c4](https://github.com/asfaload/asfald/commit/f05b2c402608bb21af9000dadc4c1e3e7c71d617))
+
+
+### Bug Fixes
+
+* consider url's port in path to index ([97bc937](https://github.com/asfaload/asfald/commit/97bc937c83b8c9cc85c895f061f664c120aae479))
+* logger prints all messages to stderr ([2cc16ba](https://github.com/asfaload/asfald/commit/2cc16ba3c4eb2247040a3e0a6cf2d70e51d87363))
+* start file transfer before index download to report inexisting file first ([0313083](https://github.com/asfaload/asfald/commit/03130838b25cd10d3b597dacd7f39cddc9062211))
+
 ## [0.4.0](https://github.com/asfaload/asfald/compare/v0.3.0...v0.4.0) (2024-11-27)
 
 
