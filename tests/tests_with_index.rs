@@ -163,7 +163,7 @@ fn file_without_index() {
         "/asfaload/asfald/releases/download/release-without-index/file_without_index",
     ));
     cmd.assert().failure().stderr(contains(
-        "Problem getting asfalod index file, is the project tracked by asfaload?",
+        "Problem getting asfaload index file, is the project tracked by asfaload?",
     ));
 
     let is_file_pred = is_file();

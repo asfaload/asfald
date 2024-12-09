@@ -36,7 +36,7 @@ pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<Chec
     let response = utils::fetch_url(index_url)
         .await
         .map_err(|e|
-            {let error_msg=format!("Problem getting asfalod index file, is the project tracked by asfaload?\nOriginal error: {}",e);
+            {let error_msg=format!("Problem getting asfaload index file, is the project tracked by asfaload?\nOriginal error: {}",e);
              anyhow::Error::msg(error_msg)})?
         .error_for_status()?;
     let index: v1::AsfaloadIndex = response.json().await?;
