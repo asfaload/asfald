@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/asfaload/asfald/compare/v0.5.0...v0.6.0) (2024-12-09)
+
+
+### Features
+
+* accept hash value on command line ([4093382](https://github.com/asfaload/asfald/commit/40933825af60aef62cabe5f08be14a50e765d54b))
+* add -p / --pattern argument ([36829fd](https://github.com/asfaload/asfald/commit/36829fd4c49a9a6da8e4112b3d3c15f75aa178f8))
+* add -q argument ([5e55fe7](https://github.com/asfaload/asfald/commit/5e55fe7cd0021dfdf2d5ae337930e696eba9bd3a))
+* add examples section to --help ([e21335c](https://github.com/asfaload/asfald/commit/e21335c0b0b2a9e08c577abb3d7b2516ae5eb719))
+* add extensible changelog patterns ([18d19bb](https://github.com/asfaload/asfald/commit/18d19bbd9b062a6097c1bb4c76d356ee681e3d44))
+* add fullpath ([23e3c39](https://github.com/asfaload/asfald/commit/23e3c39b0d801184e4f84a0b7e13927a93618d31))
+* add get_all_hashes ([96b6976](https://github.com/asfaload/asfald/commit/96b697627522a1ff43bd8aa29e42731dae6dd701))
+* add get_best_hash_for_file ([8e3c969](https://github.com/asfaload/asfald/commit/8e3c9698e9ec5638aaf1023c49579a405253ad8d))
+* add lib parsing asfaload index files ([6312d8e](https://github.com/asfaload/asfald/commit/6312d8e7df58e76a5592c2a6408650326a1084b2))
+* add pre-commit support ([53b3bcf](https://github.com/asfaload/asfald/commit/53b3bcf6c7ca2c58ac2b2c1706d743a24943a1a4))
+* also compare to checksum published in release ([0a8c859](https://github.com/asfaload/asfald/commit/0a8c859dbefbc47bc93091e8e8f2aaff165a4b01))
+* download checksums file from our mirror when flag -a used ([759edca](https://github.com/asfaload/asfald/commit/759edcac64327fd7a67be4a00cdfbe19392a0975))
+* enable lto in release build ([9e39df1](https://github.com/asfaload/asfald/commit/9e39df1e80a98a1dfd76ff727998a3398faeb7cf))
+* get_all_checksums indicates consistency with enum case ([2a30e26](https://github.com/asfaload/asfald/commit/2a30e26f776350f8b12845f5606985ba39c06e5c))
+* implement use of asfaload index files ([8b4bad4](https://github.com/asfaload/asfald/commit/8b4bad47c01405bd6d4c5d34c9ca82a7854efffc))
+* potentially support multiple mirrors ([c922aaf](https://github.com/asfaload/asfald/commit/c922aafd55d77a5c66731bc10391227ab05c625a))
+* report host that served the checksums file ([2698a5b](https://github.com/asfaload/asfald/commit/2698a5b3a7c044d2bde5d66699c989824bb524df))
+* return Err if usable checksum not found ([3a9c016](https://github.com/asfaload/asfald/commit/3a9c0162e590a53d4dbfc30597a3db8c70c62081))
+* return struct and not only hash value when looking for a file's hash ([9d7c1b7](https://github.com/asfaload/asfald/commit/9d7c1b7c3c0e85c018509893e2a83d07fde341b9))
+* send to stdout if filename is - ([f05b2c4](https://github.com/asfaload/asfald/commit/f05b2c402608bb21af9000dadc4c1e3e7c71d617))
+* split force flag in absent and invalid cases ([bcc6bb2](https://github.com/asfaload/asfald/commit/bcc6bb28e41cb5f08b5f2c99e8ccf1206ca3e45e))
+* support cloudflare pages ([300b5d0](https://github.com/asfaload/asfald/commit/300b5d0cd265c59ac9fba52b732697776500d6ad))
+* use asfaload indexes by default ([fc64e10](https://github.com/asfaload/asfald/commit/fc64e103330408d6cd4defad23faff9ff6afa73b))
+
+
+### Bug Fixes
+
+* compress release with zip for windows ([c853e78](https://github.com/asfaload/asfald/commit/c853e78ce3de982d48cf007d0e7ac92a08aec123))
+* consider url's port in path to index ([97bc937](https://github.com/asfaload/asfald/commit/97bc937c83b8c9cc85c895f061f664c120aae479))
+* defining the CNAME to gh removes the prfix in the url ([df93ed4](https://github.com/asfaload/asfald/commit/df93ed4f0965c43028c2ca8d0f262148a58f0bfc))
+* disable cloudflare pages mirror ([18b4832](https://github.com/asfaload/asfald/commit/18b4832a06cd418344c63912acf2cf6fcb5deebc))
+* do not support unrecommended hashing algos ([6a665e9](https://github.com/asfaload/asfald/commit/6a665e90e4c5004841b1ae91dad6230cc25a9a9d))
+* exit process with error code if error occured ([cb5d67f](https://github.com/asfaload/asfald/commit/cb5d67f8fd453c91ce3d935025305e5b8cb2b4bd))
+* explicitly write out lifetime ([533d8f8](https://github.com/asfaload/asfald/commit/533d8f883f4fc883bbf66ee8a396a6a3141982cb))
+* handle binary file marker in shasum files ([6983c86](https://github.com/asfaload/asfald/commit/6983c8689106f2c4749024e841ac701c02c02fa8))
+* handle remote checksums ([94e42db](https://github.com/asfaload/asfald/commit/94e42db4add5d491a9d56042066cb96170cb97cd))
+* if remote checksums pattern is not parsed as a url, used it as path ([3d0182d](https://github.com/asfaload/asfald/commit/3d0182daf6362297f1180fc6863402d9d58c0268))
+* ignore paths inside checkums files ([84d4a8f](https://github.com/asfaload/asfald/commit/84d4a8f3b138c808b9613e36a1d14cef49228afa))
+* index file is not hidden ([ff24cb6](https://github.com/asfaload/asfald/commit/ff24cb6f6f8fac772c8f57ff76ab9f069b44cfac))
+* logger prints all messages to stderr ([2cc16ba](https://github.com/asfaload/asfald/commit/2cc16ba3c4eb2247040a3e0a6cf2d70e51d87363))
+* make sure to hide the progress bar in quiet mode ([e8a8c50](https://github.com/asfaload/asfald/commit/e8a8c50b574508288b410f76ab46df053b1bb5d8))
+* remove error-causing space in https url scheme string comparison ([4bb8ab3](https://github.com/asfaload/asfald/commit/4bb8ab3231e6553a7516beffe6161f3bc28313dc))
+* set correct name in code ([97f5ea7](https://github.com/asfaload/asfald/commit/97f5ea772d9d2342e4bf0b95bf435a74e3d61c2d))
+* start file transfer before index download to report inexisting file first ([0313083](https://github.com/asfaload/asfald/commit/03130838b25cd10d3b597dacd7f39cddc9062211))
+* the path passed to -p is always considered from the root ([48b6a1e](https://github.com/asfaload/asfald/commit/48b6a1ecbafdb936319409e2dcbc4c745b374585))
+* update Cargo.lock after rebase ([e1c0315](https://github.com/asfaload/asfald/commit/e1c0315ae702a0f133f800b15709e4ac45b57769))
+
 ## [0.5.0](https://github.com/asfaload/asfald/compare/v0.4.0...v0.5.0) (2024-12-09)
 
 
