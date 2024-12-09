@@ -74,6 +74,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: src
+          sparse-checkout-cone-mode: false
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
