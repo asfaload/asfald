@@ -16,59 +16,59 @@ jobs:
     strategy:
       matrix:
         platform:
-          - os: windows
-            name: windows-x64
-            target: x86_64-pc-windows-msvc
-            runs-on: windows-latest
-            command: build
-            extension: .exe
-          - os: macos
-            name: apple-arm64
-            target: aarch64-apple-darwin
-            runs-on: macos-14
-            command: build
-          - os: macos
-            name: macos-x64
-            target: x86_64-apple-darwin
-            runs-on: macos-14
-            command: build
-          - os: FreeBSD-x86_64
-            name: FreeBSD-x64
-            runs-on: [ubuntu-latest]
-            target: x86_64-unknown-freebsd
-            command: build
+          # - os: windows
+          #   name: windows-x64
+          #   target: x86_64-pc-windows-msvc
+          #   runs-on: windows-latest
+          #   command: build
+          #   extension: .exe
+          # - os: macos
+          #   name: apple-arm64
+          #   target: aarch64-apple-darwin
+          #   runs-on: macos-14
+          #   command: build
+          # - os: macos
+          #   name: macos-x64
+          #   target: x86_64-apple-darwin
+          #   runs-on: macos-14
+          #   command: build
+          # - os: FreeBSD-x86_64
+          #   name: FreeBSD-x64
+          #   runs-on: [ubuntu-latest]
+          #   target: x86_64-unknown-freebsd
+          #   command: build
 
-          - os: linux
-            name: linux-x64-musl
-            target: x86_64-unknown-linux-musl
-            runs-on: [ubuntu-latest]
-            command: build
-          # for linux we only build the statically linked executable
-          #- os: linux
-          #  name: linux-x64
-          #  target: x86_64-unknown-linux-gnu
-          #  runs-on: [ ubuntu-latest]
-          #  command: build
-          - os: linux
-            name: linux-arm64-musl
-            target: aarch64-unknown-linux-musl
-            runs-on: [ubuntu-latest]
-            command: build
-          #- os: linux
-          #  name: linux-arm64
-          #  target: aarch64-unknown-linux-gnu
-          #  runs-on: [ubuntu-latest]
-          #  command: build
+          # - os: linux
+          #   name: linux-x64-musl
+          #   target: x86_64-unknown-linux-musl
+          #   runs-on: [ubuntu-latest]
+          #   command: build
+          # # for linux we only build the statically linked executable
+          # #- os: linux
+          # #  name: linux-x64
+          # #  target: x86_64-unknown-linux-gnu
+          # #  runs-on: [ ubuntu-latest]
+          # #  command: build
+          # - os: linux
+          #   name: linux-arm64-musl
+          #   target: aarch64-unknown-linux-musl
+          #   runs-on: [ubuntu-latest]
+          #   command: build
+          # #- os: linux
+          # #  name: linux-arm64
+          # #  target: aarch64-unknown-linux-gnu
+          # #  runs-on: [ubuntu-latest]
+          # #  command: build
           - os: linux
             name: linux-armv7-musl
             target: armv7-unknown-linux-musleabi
             runs-on: [ubuntu-latest]
             command: build
-          #- os: linux
-          #  name: linux-armv7
-          #  target: armv7-unknown-linux-gnueabi
-          #  runs-on: [ubuntu-latest]
-          #  command: build
+          # #- os: linux
+          # #  name: linux-armv7
+          # #  target: armv7-unknown-linux-gnueabi
+          # #  runs-on: [ubuntu-latest]
+          # #  command: build
 
     runs-on: ${{ matrix.platform.runs-on }}
     steps:
