@@ -149,6 +149,22 @@ fn file_ok_on_server_not_in_index() {
 
     let is_file_pred = is_file();
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+
+    // Similar test: the file in the release has been renamed after mirror taken
+    // The mirror has the old file name and does not find the new name
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("saved_file"));
+    cmd.arg(url(
+        "/asfaload/asfald/releases/download/v0.1.0/renamed_after_index",
+    ));
+    cmd.assert()
+        .failure()
+        .stderr(contains("Didn't find checksum for file in index file"));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }
 
