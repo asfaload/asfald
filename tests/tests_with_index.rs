@@ -31,6 +31,15 @@ fn file_with_valid_index_entry() {
         .success()
         .stderr(contains("File\'s checksum is valid !"));
 
+    // Check the checksum of the downloaded file so we are sure that
+    // when moving the file from its temporary location we don't alter it
+    let mut cmd = Command::new("/usr/bin/sha256sum");
+    cmd.current_dir(dir.as_path());
+    cmd.arg("f01");
+    cmd.assert().success().stdout(contains(
+        "972612a7a8370b797bc1d7736c01ff42b3e1ec23ec1ff6f0f1020feb6047e0d9",
+    ));
+
     let is_file_pred = is_file();
     assert!(is_file_pred.eval(Path::new(&dir.join("f01"))));
     let _ = std::fs::remove_dir(dir);
