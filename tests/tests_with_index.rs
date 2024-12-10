@@ -3,7 +3,7 @@
 // File repos are on localhost port 9988 and 9989
 use std::{
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use assert_cmd::prelude::*; // Add methods on commands
@@ -190,6 +190,60 @@ fn file_without_index() {
     cmd.assert().failure().stderr(contains(
         "Problem getting asfaload index file, is the project tracked by asfaload?",
     ));
+
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
+    let _ = std::fs::remove_dir(dir);
+}
+
+#[test]
+fn install_sh_tests() {
+    // Save on disk
+    // ------------
+    // Start with a comprehensive save on disk test to set the stage
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("install.sh"));
+    cmd.arg(url("/asfaload/asfald/releases/download/v0.1.0/install.sh"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stderr(contains("File\'s checksum is valid !"));
+
+    // Check the checksum of the downloaded file after its move from the
+    // temp location
+    let mut cmd = Command::new("/usr/bin/sha256sum");
+    cmd.current_dir(dir.as_path());
+    cmd.arg("install.sh");
+    cmd.assert().success().stdout(contains(
+        "9aad36aa9acad2311d606e5927a4be14e8899a49bd3279f1597c3941404601e3",
+    ));
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("install.sh"))));
+    let _ = std::fs::remove_dir(dir);
+
+    // Pipe to stdout
+    // --------------
+    let dir: PathBuf = testdir!();
+    #[allow(clippy::zombie_processes)]
+    let cmd = Command::new("target/debug/asfald")
+        .arg("-o")
+        // Download the file to our dedicated directory
+        .arg("-")
+        .arg(url("/asfaload/asfald/releases/download/v0.1.0/install.sh"))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start asfald process");
+
+    let asfald_out = cmd.stdout.expect("Failed to open asfald stdout");
+    let _bash = Command::new("/bin/bash")
+        .stdin(Stdio::from(asfald_out))
+        .assert()
+        .success()
+        .stdout(contains("The downloaded script is executed succesfully!"));
 
     let is_file_pred = is_file();
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
