@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, io::Write};
+use std::{collections::HashMap, error::Error, io::Write, path::Path};
 
 use anyhow::Context;
 use asfald::{
@@ -165,6 +165,14 @@ async fn run() -> anyhow::Result<()> {
         .unwrap_or_else(std::vec::Vec::new);
 
     let file = url_path.last().context("No file found in URL")?.to_owned();
+    let dest_file = args.output.unwrap_or(file.clone());
+    if (dest_file != "-") & (Path::new(&dest_file).exists()) {
+        anyhow::bail!(format!(
+            "Destination file exists ({}).\nNot overwriting files, please remove it.",
+            dest_file
+        ));
+    }
+
     let path = url_path[..url_path.len() - 1].join("/");
 
     let mut checksum = match args.checksum_source.hash_value {
@@ -309,7 +317,6 @@ async fn run() -> anyhow::Result<()> {
     }
 
     // Move the temporary file to the destination file
-    let dest_file = args.output.unwrap_or(file);
     if dest_file == "-" {
         let mut f = File::open(temp_file_path).await?;
         let mut buffer = [0; 100_000];
