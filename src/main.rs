@@ -73,6 +73,7 @@ When this flag is passed, no checksums file will be used.
 
 #[derive(Parser)]
 #[command(
+    version,
     name = "asfald",
     about = "Download a file from a URL and check its checksum",
     after_help = EXAMPLE_HELP.as_str()

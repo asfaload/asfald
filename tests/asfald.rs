@@ -532,3 +532,14 @@ fn inexisting_file() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn version_flag() {
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("--help");
+    cmd.assert().success().stdout(contains("--version"));
+
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("--version");
+    cmd.assert().success();
+}
