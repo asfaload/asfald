@@ -277,3 +277,41 @@ fn install_sh_tests() {
     assert!(!is_file_pred.eval(Path::new(&dir.join("saved_file"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn binary_pipe() {
+    let dir: PathBuf = testdir!();
+    #[allow(clippy::zombie_processes)]
+    let cmd = Command::new("target/debug/asfald")
+        .arg("-q")
+        .arg("-o")
+        // Download the file to our dedicated directory
+        .arg("-")
+        .arg(url("/asfaload/asfald/releases/download/v0.1.0/archive.tgz"))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start asfald process");
+
+    let asfald_out = cmd.stdout.expect("Failed to open asfald stdout");
+    #[allow(clippy::zombie_processes)]
+    let gunzip = Command::new("/usr/bin/gunzip")
+        .arg("-c")
+        .stdin(Stdio::from(asfald_out))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start gunzip process");
+    let gunzip_out = gunzip.stdout.expect("Failed to open gunzip stdout");
+
+    let _tar = Command::new("/usr/bin/tar")
+        .arg("-C")
+        .arg(&dir)
+        .arg("-xf")
+        .arg("-")
+        .stdin(Stdio::from(gunzip_out))
+        .assert()
+        .success();
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("f09"))));
+    assert!(is_file_pred.eval(Path::new(&dir.join("f10"))));
+    let _ = std::fs::remove_dir(dir);
+}
