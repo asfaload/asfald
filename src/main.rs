@@ -114,9 +114,11 @@ struct ChecksumSource {
     /// Specify the checksum value for the downloaded file
     #[arg(short = 'H', long = "hash", value_name = "HASH")]
     hash_value: Option<String>,
-    /// Specify the checksum value for the downloaded file
+    /// Specify the host checksums files will be fetched from. Prevents use of asfaload index
+    /// files.
     #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
     asfaload_host: bool,
+    // Do not use asfaload index files.
     #[arg(
         short = 'I',
         long = "no-asfaload-index",
