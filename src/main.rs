@@ -97,6 +97,10 @@ struct Cli {
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     output: Option<String>,
 
+    /// Overwrite existing files
+    #[arg(short = 'w', long = "overwrite", value_name = "OVERWRITE")]
+    overwrite: bool,
+
     /// The URL to download the file from
     url: Url,
 }
@@ -166,9 +170,9 @@ async fn run() -> anyhow::Result<()> {
 
     let file = url_path.last().context("No file found in URL")?.to_owned();
     let dest_file = args.output.unwrap_or(file.clone());
-    if (dest_file != "-") & (Path::new(&dest_file).exists()) {
+    if (dest_file != "-") & !args.overwrite & (Path::new(&dest_file).exists()) {
         anyhow::bail!(format!(
-            "Destination file exists ({}).\nNot overwriting files, please remove it.",
+            "Destination file exists ({}).\nNot overwriting files, please remove it or use the --overwrite flag.",
             dest_file
         ));
     }
