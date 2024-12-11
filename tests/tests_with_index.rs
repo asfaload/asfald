@@ -2,6 +2,7 @@
 // For these tests we run two mirrors on localhost, on port 9898 and 9899
 // File repos are on localhost port 9988 and 9989
 use std::{
+    fs::File,
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -42,6 +43,33 @@ fn file_with_valid_index_entry() {
 
     let is_file_pred = is_file();
     assert!(is_file_pred.eval(Path::new(&dir.join("f01"))));
+    let _ = std::fs::remove_dir(dir);
+
+    // Pipe to stdout
+    // --------------
+    // asfald pipes to stdout, and we save this to a file.
+    let dir: PathBuf = testdir!();
+    let output_path = dir.join("captured_output");
+    let output_file = File::create(output_path).expect("failed to open log");
+    #[allow(clippy::zombie_processes)]
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o")
+        // Download the file to our dedicated directory
+        .arg("-")
+        .arg(url("/asfaload/asfald/releases/download/v0.1.0/f01"))
+        .stdout(output_file);
+    cmd.assert().success();
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("captured_output"))));
+
+    // Check the captured output is as expected
+    let mut cmd = Command::new("/usr/bin/sha256sum");
+    cmd.arg(Path::new(&dir.join("captured_output")));
+    cmd.assert().success().stdout(contains(
+        "972612a7a8370b797bc1d7736c01ff42b3e1ec23ec1ff6f0f1020feb6047e0d9",
+    ));
+
     let _ = std::fs::remove_dir(dir);
 }
 
