@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, io::Write};
+use std::{collections::HashMap, error::Error, io::Write, path::Path};
 
 use anyhow::Context;
 use asfald::{
@@ -97,6 +97,10 @@ struct Cli {
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     output: Option<String>,
 
+    /// Overwrite existing files
+    #[arg(short = 'w', long = "overwrite", value_name = "OVERWRITE")]
+    overwrite: bool,
+
     /// The URL to download the file from
     url: Url,
 }
@@ -110,9 +114,11 @@ struct ChecksumSource {
     /// Specify the checksum value for the downloaded file
     #[arg(short = 'H', long = "hash", value_name = "HASH")]
     hash_value: Option<String>,
-    /// Specify the checksum value for the downloaded file
+    /// Specify the host checksums files will be fetched from. Prevents use of asfaload index
+    /// files.
     #[arg(short = 'a', long = "asfaload-host", value_name = "WITH_ASFALOAD_HOST")]
     asfaload_host: bool,
+    // Do not use asfaload index files.
     #[arg(
         short = 'I',
         long = "no-asfaload-index",
@@ -165,6 +171,14 @@ async fn run() -> anyhow::Result<()> {
         .unwrap_or_else(std::vec::Vec::new);
 
     let file = url_path.last().context("No file found in URL")?.to_owned();
+    let dest_file = args.output.unwrap_or(file.clone());
+    if (dest_file != "-") & !args.overwrite & (Path::new(&dest_file).exists()) {
+        anyhow::bail!(format!(
+            "Destination file exists ({}).\nNot overwriting files, please remove it or use the --overwrite flag.",
+            dest_file
+        ));
+    }
+
     let path = url_path[..url_path.len() - 1].join("/");
 
     let mut checksum = match args.checksum_source.hash_value {
@@ -309,7 +323,6 @@ async fn run() -> anyhow::Result<()> {
     }
 
     // Move the temporary file to the destination file
-    let dest_file = args.output.unwrap_or(file);
     if dest_file == "-" {
         let mut f = File::open(temp_file_path).await?;
         let mut buffer = [0; 100_000];

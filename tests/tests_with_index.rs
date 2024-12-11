@@ -315,3 +315,52 @@ fn binary_pipe() {
     assert!(is_file_pred.eval(Path::new(&dir.join("f10"))));
     let _ = std::fs::remove_dir(dir);
 }
+
+#[test]
+fn not_overwriting() {
+    let dir: PathBuf = testdir!();
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("f01"));
+    cmd.arg(url("/asfaload/asfald/releases/download/v0.1.0/f01"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .success()
+        .stderr(contains("File\'s checksum is valid !"));
+
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new(&dir.join("f01"))));
+
+    // Downloading the same file to the same location is rejected
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("f01"));
+    cmd.arg(url("/asfaload/asfald/releases/download/v0.1.0/f01"));
+    // spawn will display the output of the command
+    //cmd.spawn().unwrap();
+    cmd.assert()
+        .failure()
+        .stderr(contains(format!(
+            "Destination file exists ({}).",
+            dir.join("f01").to_str().unwrap()
+        )))
+        .stderr(contains(
+            "Not overwriting files, please remove it or use the --overwrite flag.",
+        ));
+
+    // Except if the flag ovrewrite is passed
+    let mut cmd = Command::new("target/debug/asfald");
+    cmd.arg("-o");
+    // Download the file to our dedicated directory
+    cmd.arg(dir.join("f01"));
+    cmd.arg("--overwrite");
+    cmd.arg(url("/asfaload/asfald/releases/download/v0.1.0/f01"));
+    cmd.assert()
+        .success()
+        .stderr(contains("File\'s checksum is valid !"))
+        .stderr(contains("Not overwriting files, please remove it.").not());
+    let _ = std::fs::remove_dir(dir);
+}
