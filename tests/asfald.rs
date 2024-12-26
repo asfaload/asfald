@@ -114,7 +114,6 @@ fn file_with_valid_checksum_p_fullpath() {
         .stderr(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
-    // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -216,7 +215,6 @@ fn file_with_valid_checksum_q() {
     cmd.assert().success();
 
     let is_file_pred = is_file();
-    // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -269,7 +267,6 @@ fn file_without_checksums_file_but_force_absent() {
         ));
 
     let is_file_pred = is_file();
-    // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -297,7 +294,6 @@ fn file_without_checksums_file_but_force_invalid() {
         ));
 
     let is_file_pred = is_file();
-    // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -335,7 +331,7 @@ fn file_with_invalid_checksum_force_absent() {
 
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
-// With --force-absent: should validate the checksum if it is present
+// With --force-invalid: should download even if invalid checksum
 fn file_with_invalid_checksum_force_invalid() {
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
