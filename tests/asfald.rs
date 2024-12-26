@@ -304,14 +304,19 @@ fn file_without_checksums_file_but_force_invalid() {
 
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
-fn file_with_invalid_checksum() {
+fn file_with_invalid_checksum_no_save() {
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.assert()
         .failure()
         .stderr(contains("Checksum file found at localhost!"))
-        .stderr(contains("File\'s checksum is invalid !"));
+        .stderr(contains("File\'s checksum is invalid !"))
+        .stderr(contains("... but continuing due to --force-invalid flag").not())
+        .stderr(contains("Checksum validation failed"));
+    let is_file_pred = is_file();
+    // Check file is not saved on disk
+    assert!(!is_file_pred.eval(Path::new("the_file.txt")));
 }
 
 #[test]
