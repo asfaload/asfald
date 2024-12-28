@@ -342,6 +342,9 @@ fn file_with_invalid_checksum_force_invalid() {
         .stderr(contains("Checksum file found at localhost!"))
         .stderr(contains("File\'s checksum is invalid !"))
         .stderr(contains("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️"));
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new("the_file.txt")));
+    let _ = std::fs::remove_file(Path::new("the_file.txt"));
 }
 
 #[test]
