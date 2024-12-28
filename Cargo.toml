@@ -15,7 +15,7 @@ edition = "2021"
 testing = []
 
 [dependencies]
-anyhow = "1.0.94"
+anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive"] }
 console = "0.15.9"
 digest = "0.10.7"
