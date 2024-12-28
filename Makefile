@@ -23,8 +23,8 @@ CURRENT_DIR := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 start-test-server:
 	$(TMUX-SESSION-EXISTS) || tmux new-session -s "$(TMUX-SESSION)" -c $(CURRENT_DIR)/tests/data/server1 -d python -m http.server 9988
 	$(TMUX-SESSION-EXISTS_2) || tmux new-session -s "$(TMUX-SESSION)_2" -c $(CURRENT_DIR)/tests/data/server2 -d python -m http.server 9989
-	$(TMUX-SESSION-MIRROR) || tmux new-session -s "$(TMUX-MIRROR)" -c $(CURRENT_DIR)/tests/data/mirror1 -d python -m http.server 9898
-	$(TMUX-SESSION-MIRROR_2) || tmux new-session -s "$(TMUX-MIRROR)_2" -c $(CURRENT_DIR)/tests/data/mirror2 -d python -m http.server 9899
+	$(TMUX-SESSION-MIRROR) || tmux new-session -s "$(TMUX-MIRROR)" -c $(CURRENT_DIR)/tests/data/mirror1 -d python $(CURRENT_DIR)/tests/scripts/web_server.py 9898
+	$(TMUX-SESSION-MIRROR_2) || tmux new-session -s "$(TMUX-MIRROR)_2" -c $(CURRENT_DIR)/tests/data/mirror2 -d python $(CURRENT_DIR)/tests/scripts/web_server.py 9899
 
 stop-test-server:
 	$(TMUX-SESSION-EXISTS) && tmux kill-session -t "$(TMUX-SESSION)" || true

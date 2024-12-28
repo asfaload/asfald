@@ -114,7 +114,6 @@ fn file_with_valid_checksum_p_fullpath() {
         .stderr(contains("File\'s checksum is valid !"));
 
     let is_file_pred = is_file();
-    // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -216,7 +215,6 @@ fn file_with_valid_checksum_q() {
     cmd.assert().success();
 
     let is_file_pred = is_file();
-    // Check the original filename is not present
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -269,7 +267,6 @@ fn file_without_checksums_file_but_force_absent() {
         ));
 
     let is_file_pred = is_file();
-    // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
@@ -297,21 +294,25 @@ fn file_without_checksums_file_but_force_invalid() {
         ));
 
     let is_file_pred = is_file();
-    // Check no file was downloaded
     assert!(is_file_pred.eval(Path::new(&dir.join("the_file.txt"))));
     let _ = std::fs::remove_dir(dir);
 }
 
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
-fn file_with_invalid_checksum() {
+fn file_with_invalid_checksum_no_save() {
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
     cmd.arg(url("/invalid_checksum/the_file.txt"));
     cmd.assert()
         .failure()
         .stderr(contains("Checksum file found at localhost!"))
-        .stderr(contains("File\'s checksum is invalid !"));
+        .stderr(contains("File\'s checksum is invalid !"))
+        .stderr(contains("... but continuing due to --force-invalid flag").not())
+        .stderr(contains("Checksum validation failed"));
+    let is_file_pred = is_file();
+    // Check file is not saved on disk
+    assert!(!is_file_pred.eval(Path::new("the_file.txt")));
 }
 
 #[test]
@@ -326,11 +327,13 @@ fn file_with_invalid_checksum_force_absent() {
         .failure()
         .stderr(contains("Checksum file found at localhost!"))
         .stderr(contains("File\'s checksum is invalid !"));
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new("the_file.txt")));
 }
 
 #[test]
 // File downloaded is present in checksums file, but the checksum is different
-// With --force-absent: should validate the checksum if it is present
+// With --force-invalid: should download even if invalid checksum
 fn file_with_invalid_checksum_force_invalid() {
     let mut cmd = Command::new("target/debug/asfald");
     cmd.arg("-I");
@@ -341,6 +344,9 @@ fn file_with_invalid_checksum_force_invalid() {
         .stderr(contains("Checksum file found at localhost!"))
         .stderr(contains("File\'s checksum is invalid !"))
         .stderr(contains("⚠️⚠️ WARNING: this is insecure, and still downloads file with a checksum present, but invalid! ⚠️⚠️"));
+    let is_file_pred = is_file();
+    assert!(is_file_pred.eval(Path::new("the_file.txt")));
+    let _ = std::fs::remove_file(Path::new("the_file.txt"));
 }
 
 #[test]
