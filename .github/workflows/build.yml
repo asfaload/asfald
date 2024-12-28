@@ -18,8 +18,8 @@ jobs:
         platform:
           - os: windows
             name: windows-x64
-            target: x86_64-pc-windows-gnu
-            runs-on: ubuntu-latest
+            target: x86_64-pc-windows-msvc
+            runs-on: windows-latest
             command: build
             extension: .exe
           - os: macos
