@@ -327,6 +327,8 @@ fn file_with_invalid_checksum_force_absent() {
         .failure()
         .stderr(contains("Checksum file found at localhost!"))
         .stderr(contains("File\'s checksum is invalid !"));
+    let is_file_pred = is_file();
+    assert!(!is_file_pred.eval(Path::new("the_file.txt")));
 }
 
 #[test]
