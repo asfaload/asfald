@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/asfaload/asfald/compare/v0.5.1...v0.6.0) (2025-01-31)
+
+
+### Features
+
+* add flag to overwrite existing files ([ebb8589](https://github.com/asfaload/asfald/commit/ebb8589c28fe05c0b2c423d95c9005ae220af857))
+* refuse to overwrite existing file ([ac4b00c](https://github.com/asfaload/asfald/commit/ac4b00cd535d97391fe1ae540a59d86c2c266827))
+
+
+### Bug Fixes
+
+* add --version flag ([93e1982](https://github.com/asfaload/asfald/commit/93e19828c56e4f87f84a3a58df79b1352ffce619))
+
 ## [0.5.1](https://github.com/asfaload/asfald/compare/v0.5.0...v0.5.1) (2024-12-10)
 
 
