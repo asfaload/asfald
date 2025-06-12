@@ -26,12 +26,15 @@ pub fn original_checksums_file_for(
     download_url.join(file_checksum.source.as_str()).unwrap()
 }
 // optional indicates if we continue even if we cannot validated the checksum
-pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<ChecksumValidator> {
+pub async fn validator_and_index_for(
+    url: &url::Url,
+    optional: bool,
+) -> anyhow::Result<(ChecksumValidator, v1::AsfaloadIndex)> {
     let index_url = index_for(url);
     let filename = url
         .path_segments()
         .unwrap()
-        .last()
+        .next_back()
         .expect("Cannot extract filename from url");
     let response = utils::fetch_url(index_url)
         .await
@@ -66,7 +69,7 @@ pub async fn checksum_for(url: &url::Url, optional: bool) -> anyhow::Result<Chec
         v1::Algo::Sha1 => checksum::ChecksumAlgorithm::SHA1,
     };
     let validator = checksum::ChecksumValidator::new(checksum_algorithm, hash_info.hash.as_str());
-    Ok(validator)
+    Ok((validator, index))
 }
 
 #[cfg(test)]
