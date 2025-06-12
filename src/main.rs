@@ -135,6 +135,45 @@ async fn main() {
     }
 }
 
+// Helper to log_info details about vulnerability window
+fn print_vulnerability_window_info(vuln_window: &chrono::TimeDelta) {
+    match (
+        vuln_window.num_days(),
+        vuln_window.num_hours(),
+        vuln_window.num_minutes(),
+    ) {
+        (0, 0, m) => log_info(
+            format!(
+                "Vulnerability window is of {} minutes ({})",
+                m,
+                if m <= 5 { "GOOD!" } else { "acceptable" }
+            )
+            .as_str(),
+        ),
+        (0, h, _) => log_info(
+            format!(
+                "Vulnerability window is of {} hours ({})",
+                h,
+                if h < 2 {
+                    "ok"
+                } else if h < 4 {
+                    "a bit long"
+                } else {
+                    "too long, be cautious"
+                }
+            )
+            .as_str(),
+        ),
+        (d, _, _) => log_info(
+            format!(
+                "Vulnerability window is of {} day{} (much too long)",
+                d,
+                if d > 1 { "s" } else { "" }
+            )
+            .as_str(),
+        ),
+    }
+}
 async fn run() -> anyhow::Result<()> {
     let args = Cli::parse();
     let checksum_flag = &args.checksum_source;
@@ -196,7 +235,17 @@ async fn run() -> anyhow::Result<()> {
                 && !checksum_flag.no_asfaload_index
             {
                 log_info("Using asfaload index on mirror");
-                let validator = index::checksum_for(&url, args.force_invalid).await?;
+                let (validator, index) =
+                    index::validator_and_index_for(&url, args.force_invalid).await?;
+                log_info(
+                    format!(
+                        "Artifact was published on {} and checksums file was mirrored on {}",
+                        index.published_on, index.mirrored_on
+                    )
+                    .as_str(),
+                );
+                let vuln_window = index.vulnerability_window();
+                print_vulnerability_window_info(&vuln_window);
                 Some(validator)
             } else {
                 log_info("Will for hash in a checksums file");

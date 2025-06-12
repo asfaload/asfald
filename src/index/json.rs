@@ -38,6 +38,21 @@ pub mod v1 {
         published_files: Vec<FileChecksum>,
     }
 
+    // Define separate vulnerability window computation so it can be tested
+    // easily (simply passing timestamps, so not needing to parse different
+    // json strings in the tests)
+    pub fn vulnerability_window(
+        published_on: chrono::DateTime<chrono::Utc>,
+        mirrored_on: chrono::DateTime<chrono::Utc>,
+    ) -> chrono::TimeDelta {
+        mirrored_on - published_on
+    }
+    impl AsfaloadIndex {
+        pub fn vulnerability_window(&self) -> chrono::TimeDelta {
+            vulnerability_window(self.mirrored_on, self.published_on)
+        }
+    }
+
     #[derive(PartialEq, Debug, Clone)]
     pub enum ChecksumError {
         NotFound,
@@ -300,6 +315,32 @@ mod lib_tests {
                 ]
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    // vulnerability window computation
+    fn test_vulnerability_window() -> Result<()> {
+        let published_on =
+            serde_json::from_str::<DateTime<chrono::Utc>>("\"2024-11-02T14:37:29.9397405+00:00\"")?;
+        let mirrored_on = published_on + chrono::TimeDelta::minutes(3);
+        let vuln_window = v1::vulnerability_window(published_on, mirrored_on);
+        assert_eq!(vuln_window.num_days(), 0);
+        assert_eq!(vuln_window.num_hours(), 0);
+        assert_eq!(vuln_window.num_minutes(), 3);
+
+        let mirrored_on = published_on + chrono::TimeDelta::hours(2);
+        let vuln_window = v1::vulnerability_window(published_on, mirrored_on);
+        assert_eq!(vuln_window.num_days(), 0);
+        assert_eq!(vuln_window.num_hours(), 2);
+        assert!(vuln_window.num_minutes() > 60);
+
+        let mirrored_on = published_on + chrono::TimeDelta::days(4);
+        let vuln_window = v1::vulnerability_window(published_on, mirrored_on);
+        assert_eq!(vuln_window.num_days(), 4);
+        assert!(vuln_window.num_hours() > 24);
+        assert!(vuln_window.num_minutes() > 60);
 
         Ok(())
     }
