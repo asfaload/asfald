@@ -34,7 +34,7 @@ pub async fn validator_and_index_for(
     let filename = url
         .path_segments()
         .unwrap()
-        .last()
+        .next_back()
         .expect("Cannot extract filename from url");
     let response = utils::fetch_url(index_url)
         .await
