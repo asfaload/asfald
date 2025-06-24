@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/asfaload/asfald/compare/v0.5.1...v0.6.0) (2025-06-24)
+
+
+### Features
+
+* add flag to overwrite existing files ([ebb8589](https://github.com/asfaload/asfald/commit/ebb8589c28fe05c0b2c423d95c9005ae220af857))
+* print vulnerability window of index ([158048c](https://github.com/asfaload/asfald/commit/158048c573225d254b50e5a6d0d075cf3641fa73))
+* print vulnerability window of index ([640e316](https://github.com/asfaload/asfald/commit/640e3164e565384004c62a75d30a2e841fc7a33d))
+* refuse to overwrite existing file ([ac4b00c](https://github.com/asfaload/asfald/commit/ac4b00cd535d97391fe1ae540a59d86c2c266827))
+
+
+### Bug Fixes
+
+* add --version flag ([c564ac6](https://github.com/asfaload/asfald/commit/c564ac60419162d4b54336987695395a5f872dc4))
+* add --version flag ([93e1982](https://github.com/asfaload/asfald/commit/93e19828c56e4f87f84a3a58df79b1352ffce619))
+* unusable checkums in release are logged ([eca99cc](https://github.com/asfaload/asfald/commit/eca99ccc1b70c2cf8f3e5a59aa332e857eb6ca07))
+* unusable checkums in release are logged ([9cd27f1](https://github.com/asfaload/asfald/commit/9cd27f155c163f51cfc9a894f4b58d20d0c75ad2))
+
 ## [0.5.1](https://github.com/asfaload/asfald/compare/v0.5.0...v0.5.1) (2024-12-10)
 
 
