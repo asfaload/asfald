@@ -47,18 +47,23 @@ pub async fn validator_and_index_for(
         .best_hash(filename)
         .context("Didn't find checksum for file in index file")?;
     let original_checksums_file_url = original_checksums_file_for(url, hash_info);
-    let release_checksum =
-        file_checksum_from(original_checksums_file_url, hash_info.file_name.as_str())
-            .await
-            .unwrap();
-    if release_checksum != hash_info.hash {
-        if optional {
-            log_warn("Checksum found in release is different, but continuing as --force-invalid flag found");
-        } else {
-            anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+    let release_checksum_result =
+        file_checksum_from(original_checksums_file_url, hash_info.file_name.as_str()).await;
+    match release_checksum_result {
+        Ok(release_checksum) => {
+            if release_checksum != hash_info.hash {
+                if optional {
+                    log_warn("Checksum found in release is different, but continuing as --force-invalid flag found");
+                } else {
+                    anyhow::bail!("Checksum found on mirror is different from checksum found in release. Was release updated?")
+                }
+            } else {
+                log_info("Same checksum found in release");
+            }
         }
-    } else {
-        log_info("Same checksum found in release");
+        // We get here when a project only includes the hash value in the file, without the
+        // filename.
+        Err(e) => log_info(format!("Could not use checksums found in release: {}", e).as_str()),
     }
 
     // FIXME: we should not duplicate algos types definitions. Needs a refactor of checksums.rs
