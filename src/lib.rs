@@ -1,17 +1,11 @@
-#![allow(dead_code)]
+pub mod cli;
+pub mod client;
+pub mod downloader;
+pub mod error;
+pub mod hasher;
 
-mod checksum;
-pub use checksum::*;
-
-pub mod index;
-
-pub mod logger;
-
-mod utils;
-pub use utils::*;
-
-pub mod repo_checksums;
-pub use repo_checksums::*;
-
-mod asfaload_mirror;
-pub use asfaload_mirror::*;
+pub use cli::Cli;
+pub use client::{GitHubAsset, GitHubClient, GitHubRelease};
+pub use downloader::{DownloadResult, Downloader};
+pub use error::{Error, Result};
+pub use hasher::{HashAlgorithm, Hasher};
