@@ -7,13 +7,23 @@
 # Downloading asfald
 
 `asfald` automates the validation of checksums of downloaded files, but when your are downloading `asfald` for the first time you need to do it manually.
+You can check it manually or more easily using our checksums mirror.
+
+## Checking manually
+
+Download the file from the github release, then run the command `sha256sum` passing as argument the path to the file you just downloaded.
+The value printed should be the same as the one displayed by github on the release page.
+
+## Using our checksums mirror
 
 To increase your security, we also publish the checksums files of `asfald` releases on our checksums mirror.
+But it also makes it easier to automate the check.
 
-So, after you download asfald for the first time, we encourage you to validate it. On Linux and MacOS, you can do it with the following command to be run in the directory in which you downloaded the file:
+On Linux and MacOS, you can do it with the following command to be run in the directory in which you downloaded the file:
+
 ```
-curl -L -O https://github.com/asfaload/asfald/releases/download/v0.3.0/asfald-x86_64-unknown-linux-musl
-sha256sum --ignore-missing -c <(curl --silent  https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.3.0/checksums.txt)
+curl -L -O https://github.com/asfaload/asfald/releases/download/v0.8.0/asfald-x86_64-unknown-linux-musl
+sha256sum --ignore-missing -c <(curl --silent  https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/v0.8.0/checksums.txt)
 ```
 You should get an output of the form
 ```
@@ -32,7 +42,7 @@ Subsequent downloads can be done with `asfald` itself.
 ## On the command line
 As seen above, using `asfald` is easy: just call it with the file to be downloaded's URL as argument. For example:
 ```
-asfald https://github.com/asfaload/asfald/releases/download/v0.3.0/asfald-x86_64-unknown-freebsd.tar.gz
+asfald https://github.com/asfaload/asfald/releases/download/v0.8.0/asfald-x86_64-unknown-freebsd.tar.gz
 ```
 
 If the checksum could not be validated, the execution exits with a non-zero status. This makes `asfald` usable in script, especially when combined with the `--quiet` flag.
@@ -51,7 +61,7 @@ fi
 
 You can safely download and install `asfald` in your linux containers by adding this snippet to your `Dockerfile` (you can choose the version to install by modifying the value of `asfald_version` on the first line), the only requirement is to have `curl` installed:
 ```
-RUN bash -c 'asfald_version=v0.3.0 && \
+RUN bash -c 'asfald_version=v0.8.0 && \
     curl --silent  -L -O https://github.com/asfaload/asfald/releases/download/${asfald_version}/asfald-x86_64-unknown-linux-musl && \
     sha256sum --ignore-missing -c <(curl --silent https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/${asfald_version}/checksums.txt ) && \
     mv asfald-x86_64-unknown-linux-musl /usr/bin/asfald && chmod +x /usr/bin/asfald'
@@ -68,7 +78,7 @@ Example: a full `Dockerfile` letting you run `asfald` in a container
 FROM ubuntu
 
 RUN apt-get update && apt-get install -y curl
-RUN bash -c 'asfald_version=v0.3.0 && \
+RUN bash -c 'asfald_version=v0.8.0 && \
     curl --silent  -L -O https://github.com/asfaload/asfald/releases/download/${asfald_version}/asfald-x86_64-unknown-linux-musl && \
     sha256sum --ignore-missing -c <(curl --silent https://gh.checksums.asfaload.com/github.com/asfaload/asfald/releases/download/${asfald_version}/checksums.txt ) && \
     mv asfald-x86_64-unknown-linux-musl /usr/bin/asfald && chmod +x /usr/bin/asfald'
