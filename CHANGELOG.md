@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/asfaload/asfald/compare/v0.6.0...v0.7.0) (2025-09-30)
+
+
+### Features
+
+* use github published checksums ([fb3c30a](https://github.com/asfaload/asfald/commit/fb3c30a6e36180953bde485d43d9c47e43980403))
+* use github published checksums ([b83815d](https://github.com/asfaload/asfald/commit/b83815d093069070552e4317ff6b60a64ffc8eac))
+
 ## [0.6.0](https://github.com/asfaload/asfald/compare/v0.5.1...v0.6.0) (2025-06-24)
 
 
