@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.0](https://github.com/asfaload/asfald/compare/v0.7.0...v0.8.0) (2025-09-30)
 
+Identical to 0.7.0, but release-please failed to publish the release due to a build bug for ARM, and it then wanted to release a version 0.5.1.
+I intended to release it manually but then it created the following changelog, so we will use it to publish the 0.8.0 release.
+
 
 ### Bug Fixes
 
@@ -18,10 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * release 0.8.0 ([46905d0](https://github.com/asfaload/asfald/commit/46905d007bca393245925e8c4e66f94bf90d60fe))
 
-## [0.8.0](https://github.com/asfaload/asfald/compare/v0.7.0...v0.8.0) (2025-09-30)
-
-Identical to 0.7.0, but release-please failed to publish the release due to a build bug for ARM, and it now wants to release a version 0.5.1.
-Releasing it manually instead.
 
 ## [0.7.0](https://github.com/asfaload/asfald/compare/v0.6.0...v0.7.0) (2025-09-30)
 
