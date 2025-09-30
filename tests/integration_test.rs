@@ -12,6 +12,7 @@ pub fn pause() {
 
 struct GithubMock {
     cleanup: Box<dyn FnOnce()>,
+    server_url: String,
     downloader: Downloader,
     url: Url,
     expected: DownloadResult,
@@ -25,6 +26,11 @@ impl Drop for GithubMock {
         cleanup();
     }
 }
+
+const TEST_FILE_PATH: &str = "test/repo/releases/download/v1.0.0/test-file.tar.gz";
+const TEST_FILE_CONTENT: &[u8] = b"test content";
+const INVALID_FILE_PATH: &str = "test/repo/releases/download/v1.0.0/damaged-file.tar.gz";
+const INVALID_FILE_CONTENT: &[u8] = b"damaged content";
 async fn setup_mocks() -> GithubMock {
     // Mock GitHub API response
     let mut server = mockito::Server::new_async().await;
@@ -37,39 +43,47 @@ async fn setup_mocks() -> GithubMock {
                 {{
                     "name": "test-file.tar.gz",
                     "digest": "sha256:6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72",
-                    "browser_download_url": "{}/test/repo/releases/download/v1.0.0/test-file.tar.gz"
+                    "browser_download_url": "{}/{}"
+                }},
+                {{
+                    "name": "damaged-file.tar.gz",
+                    "digest": "sha256:00000000000000000000000000000000063ff435a19cf186f76863140143ff72",
+                    "browser_download_url": "{}/{}"
                 }}
             ]
         }}
-        "#, server.url()))
+        "#, server.url(), TEST_FILE_PATH, server.url(), INVALID_FILE_PATH))
         .create();
 
     // Mock file download
     let file_mock = server
-        .mock(
-            "GET",
-            "/test/repo/releases/download/v1.0.0/test-file.tar.gz",
-        )
+        .mock("GET", format!("/{}", TEST_FILE_PATH).as_str())
         .with_status(200)
-        .with_body(b"test content")
+        .with_body(TEST_FILE_CONTENT)
+        .expect_at_least(0) // don't report an error if this url was not requested during the test
         .create();
 
+    let invalid_mock = server
+        .mock("GET", format!("/{}", INVALID_FILE_PATH).as_str())
+        .with_status(200)
+        .with_body(INVALID_FILE_CONTENT)
+        .expect_at_least(0) // don't report an error if this url was not requested during the test
+        .create();
     // Create custom GitHub client with mock server URL
     let github_client =
         asfald::GitHubClient::new().with_api_urls(url::Url::parse(server.url().as_str()).unwrap());
 
     let downloader = asfald::Downloader::new().with_client(github_client);
 
-    let address = format!(
-        "{}/test/repo/releases/download/v1.0.0/test-file.tar.gz",
-        server.url()
-    );
+    let address = format!("{}/{}", server.url(), TEST_FILE_PATH);
+    let server_url = server.url();
     let cleanup = move || {
         // Moving the server in the cleanup keeps it alive until
         // the lambda is called
         let _s = server;
         mock.assert();
         file_mock.assert();
+        invalid_mock.assert();
     };
     let url = Url::parse(&address).unwrap();
 
@@ -81,6 +95,7 @@ async fn setup_mocks() -> GithubMock {
     };
     GithubMock {
         cleanup: Box::new(cleanup),
+        server_url,
         downloader,
         url,
         expected,
@@ -104,5 +119,37 @@ async fn test_download_and_verify() {
         Err(e) => {
             panic!("Download failed: {}", e)
         }
+    }
+}
+
+#[tokio::test]
+async fn test_damaged_download_and_verify() {
+    let mock_info = setup_mocks().await;
+
+    let downloaded_url = format!("{}/{}", mock_info.server_url, INVALID_FILE_PATH);
+    // Use the downloader directly instead of CLI
+    match mock_info
+        .downloader
+        .download_and_verify(Url::parse(downloaded_url.as_str()).unwrap(), None, false)
+        .await
+    {
+        Ok(_) => {
+            panic!("Expected an error due to invalid hash")
+        }
+        Err(e) => match e {
+            asfald::Error::HashVerificationFailed {
+                expected: _,
+                actual,
+            } => {
+                // Keeping the hard-coded string here, to detect any change that might occur
+                let expected_invalid_hash =
+                    "4550858567d11b2a79c4c9f585ea220a1389f8265625bb5f6d5a68abcaae6e78";
+                assert_eq!(
+                    actual, expected_invalid_hash,
+                    "Computed hash for damaged file is not the expected value"
+                );
+            }
+            e => panic!("unexpected error type: {}", e),
+        },
     }
 }
