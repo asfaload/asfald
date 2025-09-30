@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use asfald::{DownloadResult, Downloader, HashAlgorithm};
+use asfald::{DownloadResult, Downloader, HashAlgorithm, Hasher};
 use url::Url;
 
 pub fn pause() {
@@ -10,7 +10,22 @@ pub fn pause() {
     let _ = std::io::stdin().read_line(&mut s);
 }
 
-async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult) {
+struct GithubMock {
+    cleanup: Box<dyn FnOnce()>,
+    downloader: Downloader,
+    url: Url,
+    expected: DownloadResult,
+}
+impl Drop for GithubMock {
+    fn drop(&mut self) {
+        // The Drop trait’s drop method takes &mut self, but since FnOnce consumes the closure, you
+        // need to take ownership of self.cleanup. To do this, you can use std::mem::replace or
+        // std::mem::take to replace the closure with a no-op closure
+        let cleanup = std::mem::replace(&mut self.cleanup, Box::new(|| {}));
+        cleanup();
+    }
+}
+async fn setup_mocks() -> GithubMock {
     // Mock GitHub API response
     let mut server = mockito::Server::new_async().await;
     let mock = server.mock("GET", "/repos/test/repo/releases/tags/v1.0.0")
@@ -58,30 +73,36 @@ async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult) {
     };
     let url = Url::parse(&address).unwrap();
 
-    let expected_result = DownloadResult {
+    let expected = DownloadResult {
         algorithm: HashAlgorithm::Sha256,
-        hash: "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72".to_string(),
+        hash: Hasher::compute_hash(TEST_FILE_CONTENT, &HashAlgorithm::Sha256).unwrap(),
         path: PathBuf::from_str("test-file.tar.gz").unwrap(),
-        size: 12,
+        size: TEST_FILE_CONTENT.len() as u64,
     };
-    (cleanup, downloader, url, expected_result)
+    GithubMock {
+        cleanup: Box::new(cleanup),
+        downloader,
+        url,
+        expected,
+    }
 }
 
 #[tokio::test]
 async fn test_download_and_verify() {
-    let (cleanup, downloader, url, expected_result) = setup_mocks().await;
+    let mock_info = setup_mocks().await;
     // Create downloader with custom client
 
     // Use the downloader directly instead of CLI
-    match downloader.download_and_verify(url, None, false).await {
+    match mock_info
+        .downloader
+        .download_and_verify(mock_info.url.clone(), None, false)
+        .await
+    {
         Ok(result) => {
-            assert_eq!(result, expected_result);
+            assert_eq!(result, mock_info.expected);
         }
         Err(e) => {
             panic!("Download failed: {}", e)
         }
     }
-
-    // Clean up
-    cleanup();
 }
