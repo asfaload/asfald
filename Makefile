@@ -4,7 +4,7 @@ SHELL:=/bin/bash
 ## Build static binary at target/debug/asfald, requires docker.
 ## Choose profile with variable PROFILE (dev, release,test,bench). Default = dev
 linux-static:
-	docker build -t asfald-build .
+	docker build -t asfald-build -f docker/build.linux-static.Dockerfile .
 	docker run -v $$PWD:/asfald -w /asfald -u "$$(id -u):$$(id -g)" -it --rm asfald-build ash -c "OPENSSL_STATIC=1  OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include cargo build $${PROFILE:+--$${PROFILE}}"
 
 ## Perform validations of the code and compilation (warnings are errors).
