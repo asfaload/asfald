@@ -136,6 +136,7 @@ impl Downloader {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct DownloadResult {
     pub path: std::path::PathBuf,
     pub size: u64,
