@@ -1,3 +1,8 @@
+use std::path::PathBuf;
+use std::str::FromStr;
+
+use asfald::{DownloadResult, Downloader, HashAlgorithm};
+use mockito::ServerGuard;
 use url::Url;
 
 pub fn pause() {
@@ -6,8 +11,7 @@ pub fn pause() {
     let _ = std::io::stdin().read_line(&mut s);
 }
 
-#[tokio::test]
-async fn test_download_and_verify() {
+async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult, ServerGuard) {
     // Mock GitHub API response
     let mut server = mockito::Server::new_async().await;
     let mock = server.mock("GET", "/repos/test/repo/releases/tags/v1.0.0")
@@ -36,40 +40,47 @@ async fn test_download_and_verify() {
         .with_body(b"test content")
         .create();
 
-    // Set environment variables
-    std::env::set_var("GITHUB_API_KEY", "test_token");
-
     // Create custom GitHub client with mock server URL
     let github_client =
         asfald::GitHubClient::new().with_api_urls(url::Url::parse(server.url().as_str()).unwrap());
 
-    // Create downloader with custom client
+    let cleanup = move || {
+        mock.assert();
+        file_mock.assert();
+    };
+
     let downloader = asfald::Downloader::new().with_client(github_client);
 
     let address = format!(
         "{}/test/repo/releases/download/v1.0.0/test-file.tar.gz",
         server.url()
     );
-
     let url = Url::parse(&address).unwrap();
+
+    let expected_result = DownloadResult {
+        algorithm: HashAlgorithm::Sha256,
+        hash: "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72".to_string(),
+        path: PathBuf::from_str("test-file.tar.gz").unwrap(),
+        size: 12,
+    };
+    (cleanup, downloader, url, expected_result, server)
+}
+
+#[tokio::test]
+async fn test_download_and_verify() {
+    let (cleanup, downloader, url, expected_result, _server) = setup_mocks().await;
+    // Create downloader with custom client
 
     // Use the downloader directly instead of CLI
     match downloader.download_and_verify(url, None, false).await {
         Ok(result) => {
-            assert_eq!(result.algorithm.to_string(), "sha256");
-            assert_eq!(
-                result.hash,
-                "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"
-            );
+            assert_eq!(result, expected_result);
         }
         Err(e) => {
-            pause();
             panic!("Download failed: {}", e)
         }
     }
 
     // Clean up
-    mock.assert();
-    file_mock.assert();
-    std::env::remove_var("GITHUB_API_KEY");
+    cleanup();
 }
