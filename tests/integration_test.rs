@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use asfald::{DownloadResult, Downloader, HashAlgorithm};
-use mockito::ServerGuard;
 use url::Url;
 
 pub fn pause() {
@@ -11,7 +10,7 @@ pub fn pause() {
     let _ = std::io::stdin().read_line(&mut s);
 }
 
-async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult, ServerGuard) {
+async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult) {
     // Mock GitHub API response
     let mut server = mockito::Server::new_async().await;
     let mock = server.mock("GET", "/repos/test/repo/releases/tags/v1.0.0")
@@ -44,17 +43,19 @@ async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult, Serve
     let github_client =
         asfald::GitHubClient::new().with_api_urls(url::Url::parse(server.url().as_str()).unwrap());
 
-    let cleanup = move || {
-        mock.assert();
-        file_mock.assert();
-    };
-
     let downloader = asfald::Downloader::new().with_client(github_client);
 
     let address = format!(
         "{}/test/repo/releases/download/v1.0.0/test-file.tar.gz",
         server.url()
     );
+    let cleanup = move || {
+        // Moving the server in the cleanup keeps it alive until
+        // the lambda is called
+        let _s = server;
+        mock.assert();
+        file_mock.assert();
+    };
     let url = Url::parse(&address).unwrap();
 
     let expected_result = DownloadResult {
@@ -63,12 +64,12 @@ async fn setup_mocks() -> (impl FnOnce(), Downloader, Url, DownloadResult, Serve
         path: PathBuf::from_str("test-file.tar.gz").unwrap(),
         size: 12,
     };
-    (cleanup, downloader, url, expected_result, server)
+    (cleanup, downloader, url, expected_result)
 }
 
 #[tokio::test]
 async fn test_download_and_verify() {
-    let (cleanup, downloader, url, expected_result, _server) = setup_mocks().await;
+    let (cleanup, downloader, url, expected_result) = setup_mocks().await;
     // Create downloader with custom client
 
     // Use the downloader directly instead of CLI
