@@ -1,7 +1,8 @@
-use std::path::PathBuf;
 use std::str::FromStr;
+use std::{path::PathBuf, rc::Rc};
 
 use asfald::{DownloadResult, Downloader, HashAlgorithm, Hasher};
+use indicatif::{InMemoryTerm, ProgressBar, ProgressDrawTarget};
 use url::Url;
 
 pub fn pause() {
@@ -16,6 +17,7 @@ struct GithubMock {
     downloader: Downloader,
     url: Url,
     expected: DownloadResult,
+    pb_term: Rc<InMemoryTerm>,
 }
 impl Drop for GithubMock {
     fn drop(&mut self) {
@@ -73,7 +75,15 @@ async fn setup_mocks() -> GithubMock {
     let github_client =
         asfald::GitHubClient::new().with_api_urls(url::Url::parse(server.url().as_str()).unwrap());
 
-    let downloader = asfald::Downloader::new().with_client(github_client);
+    let in_mem = Rc::new(InMemoryTerm::new(10, 80));
+    let term = in_mem.clone();
+    let pb_init = move |size| {
+        ProgressBar::with_draw_target(Some(size), ProgressDrawTarget::term_like(Box::new(*term)))
+    };
+
+    let downloader = asfald::Downloader::new()
+        .with_client(github_client)
+        .with_progress_init(pb_init);
 
     let address = format!("{}/{}", server.url(), TEST_FILE_PATH);
     let server_url = server.url();
@@ -99,6 +109,7 @@ async fn setup_mocks() -> GithubMock {
         downloader,
         url,
         expected,
+        pb_term: in_mem.clone(),
     }
 }
 
