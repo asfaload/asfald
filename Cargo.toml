@@ -1,6 +1,6 @@
 [package]
 name = "asfald"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 authors = ["Asfaload"]
 description = "A CLI utility to download files from GitHub releases with hash verification"
