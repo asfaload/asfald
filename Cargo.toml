@@ -25,6 +25,7 @@ indicatif = "0.18"
 futures = "0.3"
 
 [dev-dependencies]
+indicatif = { version = "0.18", features = ["in_memory"] }
 tempfile = "3.5"
 assert_cmd = "2.0"
 predicates = "3.0"

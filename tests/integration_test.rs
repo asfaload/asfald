@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use asfald::{DownloadResult, Downloader, HashAlgorithm, Hasher};
+use indicatif::{InMemoryTerm, ProgressBar, ProgressDrawTarget};
 use url::Url;
 
 pub fn pause() {
@@ -16,6 +18,7 @@ struct GithubMock {
     downloader: Downloader,
     url: Url,
     expected: DownloadResult,
+    pb_term: Arc<InMemoryTerm>,
 }
 impl Drop for GithubMock {
     fn drop(&mut self) {
@@ -24,6 +27,49 @@ impl Drop for GithubMock {
         // std::mem::take to replace the closure with a no-op closure
         let cleanup = std::mem::replace(&mut self.cleanup, Box::new(|| {}));
         cleanup();
+    }
+}
+
+#[derive(Debug)]
+struct RcTerm {
+    inner: Arc<indicatif::InMemoryTerm>,
+}
+
+// Implement TermLike for RcTerm by delegating to the inner InMemoryTerm
+impl indicatif::TermLike for RcTerm {
+    fn clear_line(&self) -> std::io::Result<()> {
+        self.inner.clear_line()
+    }
+    fn width(&self) -> u16 {
+        self.inner.width()
+    }
+
+    fn move_cursor_up(&self, n: usize) -> std::io::Result<()> {
+        self.inner.move_cursor_up(n)
+    }
+
+    fn move_cursor_down(&self, n: usize) -> std::io::Result<()> {
+        self.inner.move_cursor_down(n)
+    }
+
+    fn move_cursor_right(&self, n: usize) -> std::io::Result<()> {
+        self.inner.move_cursor_right(n)
+    }
+
+    fn move_cursor_left(&self, n: usize) -> std::io::Result<()> {
+        self.inner.move_cursor_left(n)
+    }
+
+    fn write_line(&self, s: &str) -> std::io::Result<()> {
+        self.inner.write_line(s)
+    }
+
+    fn write_str(&self, s: &str) -> std::io::Result<()> {
+        self.inner.write_str(s)
+    }
+
+    fn flush(&self) -> std::io::Result<()> {
+        self.inner.flush()
     }
 }
 
@@ -73,7 +119,18 @@ async fn setup_mocks() -> GithubMock {
     let github_client =
         asfald::GitHubClient::new().with_api_urls(url::Url::parse(server.url().as_str()).unwrap());
 
-    let downloader = asfald::Downloader::new().with_client(github_client);
+    let in_mem = Arc::new(InMemoryTerm::new(10, 80));
+    let term = in_mem.clone();
+    let pb_init = move |size| {
+        let rc_term = RcTerm {
+            inner: term.clone(),
+        };
+        ProgressBar::with_draw_target(Some(size), ProgressDrawTarget::term_like(Box::new(rc_term)))
+    };
+
+    let downloader = asfald::Downloader::new()
+        .with_client(github_client)
+        .with_progress_init(pb_init);
 
     let address = format!("{}/{}", server.url(), TEST_FILE_PATH);
     let server_url = server.url();
@@ -99,6 +156,7 @@ async fn setup_mocks() -> GithubMock {
         downloader,
         url,
         expected,
+        pb_term: in_mem.clone(),
     }
 }
 
@@ -115,6 +173,10 @@ async fn test_download_and_verify() {
     {
         Ok(result) => {
             assert_eq!(result, mock_info.expected);
+            assert_eq!(
+                mock_info.pb_term.contents(),
+                "██████████████████████████████████████████████████████████████████████████ 12/12"
+            );
         }
         Err(e) => {
             panic!("Download failed: {}", e)
@@ -148,8 +210,34 @@ async fn test_damaged_download_and_verify() {
                     actual, expected_invalid_hash,
                     "Computed hash for damaged file is not the expected value"
                 );
+
+                assert_eq!(
+                mock_info.pb_term.contents(),
+                "██████████████████████████████████████████████████████████████████████████ 15/15"
+            );
             }
             e => panic!("unexpected error type: {}", e),
         },
+    }
+}
+
+#[tokio::test]
+async fn test_quiet_download_and_verify() {
+    let mock_info = setup_mocks().await;
+    // Create downloader with custom client
+
+    // Use the downloader directly instead of CLI
+    match mock_info
+        .downloader
+        .download_and_verify(mock_info.url.clone(), None, true)
+        .await
+    {
+        Ok(result) => {
+            assert_eq!(result, mock_info.expected);
+            assert_eq!(mock_info.pb_term.contents(), "");
+        }
+        Err(e) => {
+            panic!("Download failed: {}", e)
+        }
     }
 }

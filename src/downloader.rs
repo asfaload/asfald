@@ -12,6 +12,7 @@ use std::path::Path;
 
 pub struct Downloader {
     pub client: GitHubClient,
+    pub progress_init: Box<dyn Fn(u64) -> ProgressBar>,
 }
 
 impl Default for Downloader {
@@ -22,8 +23,17 @@ impl Default for Downloader {
 
 impl Downloader {
     pub fn new() -> Self {
+        let progress_init = |size| {
+            let pb = ProgressBar::new(size);
+            pb.set_style(ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .unwrap_or(indicatif::ProgressStyle::default_bar())
+            .progress_chars("#>-"));
+            pb
+        };
         Self {
             client: GitHubClient::new(),
+            progress_init: Box::new(progress_init),
         }
     }
 
@@ -31,6 +41,13 @@ impl Downloader {
     pub fn with_client(mut self, client: GitHubClient) -> Self {
         self.client = client;
         self
+    }
+
+    pub fn with_progress_init(self, f: impl Fn(u64) -> ProgressBar + 'static) -> Self {
+        Self {
+            progress_init: Box::new(f),
+            ..self
+        }
     }
     pub async fn download_and_verify(
         &self,
@@ -102,11 +119,7 @@ impl Downloader {
             .ok_or_else(|| Error::from(std::io::Error::other("Missing content length header")))?;
 
         let pb = if !quiet {
-            let pb = ProgressBar::new(total_size);
-            pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-            .unwrap_or(indicatif::ProgressStyle::default_bar())
-            .progress_chars("#>-"));
+            let pb = (self.progress_init)(total_size);
             Some(pb)
         } else {
             None
