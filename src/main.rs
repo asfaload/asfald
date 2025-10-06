@@ -8,24 +8,36 @@ async fn main() -> Result<()> {
     let downloader = Downloader::new();
     let output_path = cli.output.as_deref();
 
-    match downloader
-        .download_and_verify(cli.url, output_path, cli.quiet)
-        .await
-    {
-        Ok(result) => {
-            if cli.verbose {
-                println!("Successfully downloaded and verified file:");
-                println!("  Path: {}", result.path.display());
-                println!("  Size: {} bytes", result.size);
-                println!("  Algorithm: {}", result.algorithm);
-                println!("  Hash: {}", result.hash);
+    if cli.get_hash {
+        match downloader.get_hash_for_url(cli.url).await {
+            Ok(digest) => println!("{}", digest),
+            Err(e) => {
+                if !cli.quiet {
+                    eprintln!("Error: {}", e);
+                }
+                std::process::exit(1);
             }
         }
-        Err(e) => {
-            if !cli.quiet {
-                eprintln!("Error: {}", e);
+    } else {
+        match downloader
+            .download_and_verify(cli.url, output_path, cli.quiet)
+            .await
+        {
+            Ok(result) => {
+                if cli.verbose {
+                    println!("Successfully downloaded and verified file:");
+                    println!("  Path: {}", result.path.display());
+                    println!("  Size: {} bytes", result.size);
+                    println!("  Algorithm: {}", result.algorithm);
+                    println!("  Hash: {}", result.hash);
+                }
             }
-            std::process::exit(1);
+            Err(e) => {
+                if !cli.quiet {
+                    eprintln!("Error: {}", e);
+                }
+                std::process::exit(1);
+            }
         }
     }
 

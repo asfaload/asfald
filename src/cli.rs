@@ -18,6 +18,10 @@ pub struct Cli {
     #[arg(short, long, env = "GITHUB_API_KEY")]
     pub token: Option<String>,
 
+    /// Print digest without downloading target file
+    #[arg(short, long)]
+    pub get_hash: bool,
+
     /// Verbose output
     #[arg(short, long)]
     pub verbose: bool,

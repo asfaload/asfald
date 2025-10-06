@@ -241,3 +241,24 @@ async fn test_quiet_download_and_verify() {
         }
     }
 }
+
+#[tokio::test]
+async fn test_get_digest() {
+    let mock_info = setup_mocks().await;
+    // Create downloader with custom client
+
+    // Use the downloader directly instead of CLI
+    match mock_info
+        .downloader
+        .get_hash_for_url(mock_info.url.clone())
+        .await
+    {
+        Ok(result) => {
+            assert_eq!(result, format!("sha256:{}", mock_info.expected.hash));
+            assert_eq!(mock_info.pb_term.contents(), "");
+        }
+        Err(e) => {
+            panic!("Download failed: {}", e)
+        }
+    }
+}

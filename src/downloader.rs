@@ -1,5 +1,5 @@
 use crate::{
-    client::GitHubClient,
+    client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
     Error, Result,
 };
@@ -49,25 +49,45 @@ impl Downloader {
             ..self
         }
     }
+
+    pub async fn get_release(&self, url: url::Url) -> Result<client::GitHubRelease> {
+        let (owner, repo, tag, _filename) =
+            GitHubClient::parse_github_url(url.to_string().as_str())?;
+        // Get release information
+        self.client.get_release(&owner, &repo, &tag).await
+    }
+
+    async fn get_asset_from_url(&self, url: &url::Url) -> Result<(client::GitHubAsset, String)> {
+        let (owner, repo, tag, filename) =
+            GitHubClient::parse_github_url(url.to_string().as_str())?;
+        let release = self.client.get_release(&owner, &repo, &tag).await?;
+        let asset = self.get_asset_in_release_for_filename(release, filename.clone())?;
+        Ok((asset, filename))
+    }
+
+    pub fn get_asset_in_release_for_filename(
+        &self,
+        release: client::GitHubRelease,
+        filename: String,
+    ) -> Result<client::GitHubAsset> {
+        release
+            .assets
+            .into_iter()
+            .find(|a| a.name == filename)
+            .ok_or_else(|| Error::AssetNotFound(filename.clone()))
+    }
+
+    pub async fn get_hash_for_url(&self, url: url::Url) -> Result<String> {
+        let (asset, _) = self.get_asset_from_url(&url).await?;
+        Ok(asset.digest)
+    }
     pub async fn download_and_verify(
         &self,
         url: url::Url,
         output_path: Option<&Path>,
         quiet: bool,
     ) -> Result<DownloadResult> {
-        // Parse GitHub URL
-        let (owner, repo, tag, filename) =
-            GitHubClient::parse_github_url(url.to_string().as_str())?;
-
-        // Get release information
-        let release = self.client.get_release(&owner, &repo, &tag).await?;
-
-        // Find the asset
-        let asset = release
-            .assets
-            .into_iter()
-            .find(|a| a.name == filename)
-            .ok_or_else(|| Error::AssetNotFound(filename.clone()))?;
+        let (asset, filename) = self.get_asset_from_url(&url).await?;
 
         // Parse the digest
         let (algorithm, expected_hash) = Hasher::parse_digest(&asset.digest)?;
