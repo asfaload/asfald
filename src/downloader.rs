@@ -3,7 +3,7 @@ use crate::{
     client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
 };
-use client_lib::ClientLibError;
+use client_lib::{ClientLibError, DownloadCallbacks, download_file_with_verification};
 use futures::TryStreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha2::{Digest, Sha256};
@@ -143,6 +143,59 @@ impl Downloader {
             algorithm,
             hash: actual_hash,
         })
+    }
+
+    /// Download `url` with full Asfaload verification. Falls back to GitHub
+    /// release digest verification only when `github_fallback` is set, `url` is
+    /// a GitHub release URL, and the failure means Asfaload protection is
+    /// unavailable (never on a verification failure).
+    pub async fn download(
+        &self,
+        url: url::Url,
+        output_path: Option<&Path>,
+        backend_url: &str,
+        forge_type: Option<&str>,
+        github_fallback: bool,
+        quiet: bool,
+    ) -> Result<()> {
+        let callbacks = if quiet {
+            DownloadCallbacks::default()
+        } else {
+            DownloadCallbacks::basic()
+        };
+
+        let output_owned = output_path.map(Path::to_path_buf);
+        let result = download_file_with_verification(
+            url.as_str(),
+            output_owned.as_ref(),
+            backend_url,
+            forge_type,
+            &callbacks,
+        )
+        .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let is_github_release = GitHubClient::parse_github_url(url.as_str()).is_ok();
+                if should_fallback(&e, github_fallback, is_github_release) {
+                    if !quiet {
+                        eprintln!(
+                            "Asfaload verification unavailable ({e}); falling back to GitHub release digest."
+                        );
+                    }
+                    // FIXME: We have some repeated download occuring here. We should replace it
+                    // with a verify_downloaded_file, but download_file_with_verification might
+                    // interrupt before it downloaded the whole file. The good thing is that big
+                    // files won't have their download repeated as it will be interrupted as soon
+                    // as asfaload auth is detected as absent.
+                    self.download_and_verify(url, output_path, quiet).await?;
+                    Ok(())
+                } else {
+                    Err(Error::ClientLib(e))
+                }
+            }
+        }
     }
 
     async fn download_file(
