@@ -9,6 +9,7 @@ linux-static:
 
 ## Perform validations of the code and compilation (warnings are errors).
 check:
+	cargo fmt --check
 	cargo rustc -- -D warnings
 
 
