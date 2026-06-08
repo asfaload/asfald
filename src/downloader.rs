@@ -181,7 +181,7 @@ impl Downloader {
                 if should_fallback(&e, github_fallback, is_github_release) {
                     if !quiet {
                         eprintln!(
-                            "Asfaload verification unavailable ({e}); falling back to GitHub release digest."
+                            "Asfaload verification unavailable; falling back to GitHub release digest."
                         );
                     }
                     // FIXME: We have some repeated download occuring here. We should replace it
@@ -189,7 +189,13 @@ impl Downloader {
                     // interrupt before it downloaded the whole file. The good thing is that big
                     // files won't have their download repeated as it will be interrupted as soon
                     // as asfaload auth is detected as absent.
-                    self.download_and_verify(url, output_path, quiet).await?;
+                    self.download_and_verify(url, output_path, quiet)
+                        .await
+                        .inspect(|r| {
+                            if !quiet {
+                                println!("Check successful, {} = {}", r.algorithm, r.hash)
+                            }
+                        })?;
                     Ok(())
                 } else {
                     Err(Error::ClientLib(e))
