@@ -1,5 +1,5 @@
 use crate::{
-    Error, Result,
+    Error, Result, callbacks,
     client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
 };
@@ -161,7 +161,7 @@ impl Downloader {
         let callbacks = if quiet {
             DownloadCallbacks::default()
         } else {
-            DownloadCallbacks::basic()
+            callbacks::basic()
         };
 
         let output_owned = output_path.map(Path::to_path_buf);
