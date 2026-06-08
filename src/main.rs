@@ -19,19 +19,20 @@ async fn main() -> Result<()> {
             }
         }
     } else {
+        let backend = cli.backend_url();
+        let forge_type = cli.forge_type();
         match downloader
-            .download_and_verify(cli.url, output_path, cli.quiet)
+            .download(
+                cli.url.clone(),
+                output_path,
+                backend,
+                forge_type,
+                cli.github_fallback,
+                cli.quiet,
+            )
             .await
         {
-            Ok(result) => {
-                if cli.verbose {
-                    println!("Successfully downloaded and verified file:");
-                    println!("  Path: {}", result.path.display());
-                    println!("  Size: {} bytes", result.size);
-                    println!("  Algorithm: {}", result.algorithm);
-                    println!("  Hash: {}", result.hash);
-                }
-            }
+            Ok(()) => {}
             Err(e) => {
                 if !cli.quiet {
                     eprintln!("Error: {}", e);
