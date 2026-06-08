@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/asfaload/asfald/compare/v0.9.0...v0.10.0) (2026-06-08)
+
+
+### Features
+
+* add --github-fallback flag, default backend, and accessors ([6d8837f](https://github.com/asfaload/asfald/commit/6d8837f036e40e812d69a850a142fe4414c78b54))
+* add asfaload related flags ([eab71c9](https://github.com/asfaload/asfald/commit/eab71c999b39fa9360cf278830140ef0c48e90c6))
+* add client-lib dependency ([9ad4abc](https://github.com/asfaload/asfald/commit/9ad4abcc369adc1dc6360fb9805fcd9d8f0f9255))
+* add Downloader::download with asfaload-first verification ([5c4dc00](https://github.com/asfaload/asfald/commit/5c4dc004583bc07d30718090755d105d9fc598f6))
+* add github-digest fallback decision functions ([bd3653f](https://github.com/asfaload/asfald/commit/bd3653fd760e20fbf60bf5f543c22fb8295d467f))
+* cleanup output in case of fallback to gh ([79c6399](https://github.com/asfaload/asfald/commit/79c639963e79223afc41689266fce61f9ec69440))
+* define basic callbacks locally ([4d5ed36](https://github.com/asfaload/asfald/commit/4d5ed36cd11626addbd78ae373073cc5cfb6bdd3))
+* route asfald downloads through client-lib with github fallback ([a65bf09](https://github.com/asfaload/asfald/commit/a65bf09724d974010e38dcd97c7bade2a6485a8d))
+* wrap client-lib errors in asfald Error type ([f15f818](https://github.com/asfaload/asfald/commit/f15f81842a6f8e72e110d1e0b4df776a9d559df8))
+
 ## [0.9.0](https://github.com/asfaload/asfald/compare/v0.8.0...v0.9.0) (2025-10-06)
 
 
