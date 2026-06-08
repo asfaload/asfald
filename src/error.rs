@@ -31,6 +31,25 @@ pub enum Error {
 
     #[error("GitHub API error: {0}")]
     GitHubApiError(String),
+
+    #[error(transparent)]
+    ClientLib(#[from] client_lib::ClientLibError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use client_lib::ClientLibError;
+
+    #[test]
+    fn client_lib_error_converts_into_asfald_error() {
+        let lib_err = ClientLibError::HttpError {
+            status: 503,
+            url: "https://backend.example".to_string(),
+        };
+        let err: Error = lib_err.into();
+        assert!(matches!(err, Error::ClientLib(_)));
+    }
+}
