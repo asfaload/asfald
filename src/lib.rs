@@ -2,6 +2,7 @@ pub mod cli;
 pub mod client;
 pub mod downloader;
 pub mod error;
+pub mod flags;
 pub mod hasher;
 
 pub use cli::Cli;

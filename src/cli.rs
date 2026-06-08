@@ -2,6 +2,8 @@ use clap::Parser;
 use std::path::PathBuf;
 use url::Url;
 
+use crate::flags::{BackendUrlArgs, ForgeTypeArgs};
+
 #[derive(Parser, Debug)]
 #[command(
     name = "asfald",
@@ -29,6 +31,12 @@ pub struct Cli {
     /// No output, even no progress bar
     #[arg(short, long)]
     pub quiet: bool,
+
+    #[command(flatten)]
+    backend_url_args: BackendUrlArgs,
+
+    #[command(flatten)]
+    forge_type_args: ForgeTypeArgs,
 
     pub url: Url,
 }
