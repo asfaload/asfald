@@ -7,6 +7,7 @@ description = "A CLI utility to download files from GitHub releases with hash ve
 license = "MPLv2"
 
 [dependencies]
+client-lib = { git = "https://github.com/asfaload/asfaload", rev = "2690d79", package = "client-lib" }
 reqwest = { version = "0.13", features = [
   "stream",
   "rustls",

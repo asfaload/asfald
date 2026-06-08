@@ -1,14 +1,40 @@
 use crate::{
-    Error, Result,
+    Error, Result, callbacks,
     client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
 };
+use client_lib::{ClientLibError, DownloadCallbacks, download_file_with_verification};
 use futures::TryStreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+
+/// Returns true only for errors meaning Asfaload protection is unavailable
+/// (network / fetch / forge issues), never for errors where verification
+/// actively failed. Any unlisted variant returns false — a safe default that
+/// also covers future error variants until they are explicitly classified.
+fn allows_github_digest_fallback(err: &ClientLibError) -> bool {
+    matches!(
+        err,
+        ClientLibError::Network(_)
+            | ClientLibError::HttpError { .. }
+            | ClientLibError::ArtifactInfoFetchError(_)
+            | ClientLibError::SignersChainFetchError(_)
+            | ClientLibError::SignersChainForgeFetchError(_)
+            | ClientLibError::RevocationFetchError(_)
+            | ClientLibError::UnsupportedForge(_)
+            | ClientLibError::ForgeUrl(_)
+    )
+}
+
+/// Decide whether to fall back to GitHub-digest verification: only when the
+/// user opted in, the URL is a GitHub release URL, and the failure indicates
+/// Asfaload protection is unavailable.
+fn should_fallback(err: &ClientLibError, github_fallback: bool, is_github_release: bool) -> bool {
+    github_fallback && is_github_release && allows_github_digest_fallback(err)
+}
 
 pub struct Downloader {
     pub client: GitHubClient,
@@ -119,6 +145,65 @@ impl Downloader {
         })
     }
 
+    /// Download `url` with full Asfaload verification. Falls back to GitHub
+    /// release digest verification only when `github_fallback` is set, `url` is
+    /// a GitHub release URL, and the failure means Asfaload protection is
+    /// unavailable (never on a verification failure).
+    pub async fn download(
+        &self,
+        url: url::Url,
+        output_path: Option<&Path>,
+        backend_url: &str,
+        forge_type: Option<&str>,
+        github_fallback: bool,
+        quiet: bool,
+    ) -> Result<()> {
+        let callbacks = if quiet {
+            DownloadCallbacks::default()
+        } else {
+            callbacks::basic()
+        };
+
+        let output_owned = output_path.map(Path::to_path_buf);
+        let result = download_file_with_verification(
+            url.as_str(),
+            output_owned.as_ref(),
+            backend_url,
+            forge_type,
+            &callbacks,
+        )
+        .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let is_github_release = GitHubClient::parse_github_url(url.as_str()).is_ok();
+                if should_fallback(&e, github_fallback, is_github_release) {
+                    if !quiet {
+                        eprintln!(
+                            "Asfaload verification unavailable; falling back to GitHub release digest."
+                        );
+                    }
+                    // FIXME: We have some repeated download occuring here. We should replace it
+                    // with a verify_downloaded_file, but download_file_with_verification might
+                    // interrupt before it downloaded the whole file. The good thing is that big
+                    // files won't have their download repeated as it will be interrupted as soon
+                    // as asfaload auth is detected as absent.
+                    self.download_and_verify(url, output_path, quiet)
+                        .await
+                        .inspect(|r| {
+                            if !quiet {
+                                println!("Check successful, {} = {}", r.algorithm, r.hash)
+                            }
+                        })?;
+                    Ok(())
+                } else {
+                    Err(Error::ClientLib(e))
+                }
+            }
+        }
+    }
+
     async fn download_file(
         &self,
         url: &str,
@@ -175,4 +260,85 @@ pub struct DownloadResult {
     pub size: u64,
     pub algorithm: HashAlgorithm,
     pub hash: String,
+}
+
+#[cfg(test)]
+mod fallback_tests {
+    use super::*;
+    use client_lib::ClientLibError;
+
+    // Representative "protection unavailable" error, used in place of
+    // ClientLibError::Network (which needs a live reqwest::Error to construct).
+    // Both are eligible for fallback.
+    fn unavailable_error() -> ClientLibError {
+        ClientLibError::HttpError {
+            status: 503,
+            url: "https://backend.example".to_string(),
+        }
+    }
+
+    #[test]
+    fn unavailable_errors_are_eligible() {
+        assert!(allows_github_digest_fallback(&unavailable_error()));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::ArtifactInfoFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::UnsupportedForge("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::RevocationFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::SignersChainFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::SignersChainForgeFetchError("x".to_string())
+        ));
+    }
+
+    #[test]
+    fn verification_failures_are_not_eligible() {
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::FileRevoked {
+                timestamp: "t".to_string(),
+                initiator: "i".to_string(),
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::HashMismatch {
+                expected: "e".to_string(),
+                computed: "c".to_string(),
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::SignatureThresholdNotMet {
+                required: 1,
+                found: 0,
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::FileNotInIndex("f".to_string())
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::Unauthorized("u".to_string())
+        ));
+    }
+
+    #[test]
+    fn should_fallback_truth_table() {
+        let eligible = unavailable_error();
+        let ineligible = ClientLibError::FileRevoked {
+            timestamp: "t".to_string(),
+            initiator: "i".to_string(),
+        };
+        // All three conditions must hold.
+        assert!(should_fallback(&eligible, true, true));
+        // Flag off.
+        assert!(!should_fallback(&eligible, false, true));
+        // Not a GitHub release URL.
+        assert!(!should_fallback(&eligible, true, false));
+        // Eligible flag + URL but a verification failure.
+        assert!(!should_fallback(&ineligible, true, true));
+    }
 }
