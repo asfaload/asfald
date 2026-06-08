@@ -1,7 +1,7 @@
 use crate::{
+    Error, Result,
     client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
-    Error, Result,
 };
 use futures::TryStreamExt;
 use indicatif::{ProgressBar, ProgressStyle};

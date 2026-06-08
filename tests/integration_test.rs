@@ -212,9 +212,9 @@ async fn test_damaged_download_and_verify() {
                 );
 
                 assert_eq!(
-                mock_info.pb_term.contents(),
-                "██████████████████████████████████████████████████████████████████████████ 15/15"
-            );
+                    mock_info.pb_term.contents(),
+                    "██████████████████████████████████████████████████████████████████████████ 15/15"
+                );
             }
             e => panic!("unexpected error type: {}", e),
         },
