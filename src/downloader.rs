@@ -3,12 +3,38 @@ use crate::{
     client::{self, GitHubClient},
     hasher::{HashAlgorithm, Hasher},
 };
+use client_lib::ClientLibError;
 use futures::TryStreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+
+/// Returns true only for errors meaning Asfaload protection is unavailable
+/// (network / fetch / forge issues), never for errors where verification
+/// actively failed. Any unlisted variant returns false — a safe default that
+/// also covers future error variants until they are explicitly classified.
+fn allows_github_digest_fallback(err: &ClientLibError) -> bool {
+    matches!(
+        err,
+        ClientLibError::Network(_)
+            | ClientLibError::HttpError { .. }
+            | ClientLibError::ArtifactInfoFetchError(_)
+            | ClientLibError::SignersChainFetchError(_)
+            | ClientLibError::SignersChainForgeFetchError(_)
+            | ClientLibError::RevocationFetchError(_)
+            | ClientLibError::UnsupportedForge(_)
+            | ClientLibError::ForgeUrl(_)
+    )
+}
+
+/// Decide whether to fall back to GitHub-digest verification: only when the
+/// user opted in, the URL is a GitHub release URL, and the failure indicates
+/// Asfaload protection is unavailable.
+fn should_fallback(err: &ClientLibError, github_fallback: bool, is_github_release: bool) -> bool {
+    github_fallback && is_github_release && allows_github_digest_fallback(err)
+}
 
 pub struct Downloader {
     pub client: GitHubClient,
@@ -175,4 +201,85 @@ pub struct DownloadResult {
     pub size: u64,
     pub algorithm: HashAlgorithm,
     pub hash: String,
+}
+
+#[cfg(test)]
+mod fallback_tests {
+    use super::*;
+    use client_lib::ClientLibError;
+
+    // Representative "protection unavailable" error, used in place of
+    // ClientLibError::Network (which needs a live reqwest::Error to construct).
+    // Both are eligible for fallback.
+    fn unavailable_error() -> ClientLibError {
+        ClientLibError::HttpError {
+            status: 503,
+            url: "https://backend.example".to_string(),
+        }
+    }
+
+    #[test]
+    fn unavailable_errors_are_eligible() {
+        assert!(allows_github_digest_fallback(&unavailable_error()));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::ArtifactInfoFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::UnsupportedForge("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::RevocationFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::SignersChainFetchError("x".to_string())
+        ));
+        assert!(allows_github_digest_fallback(
+            &ClientLibError::SignersChainForgeFetchError("x".to_string())
+        ));
+    }
+
+    #[test]
+    fn verification_failures_are_not_eligible() {
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::FileRevoked {
+                timestamp: "t".to_string(),
+                initiator: "i".to_string(),
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::HashMismatch {
+                expected: "e".to_string(),
+                computed: "c".to_string(),
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::SignatureThresholdNotMet {
+                required: 1,
+                found: 0,
+            }
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::FileNotInIndex("f".to_string())
+        ));
+        assert!(!allows_github_digest_fallback(
+            &ClientLibError::Unauthorized("u".to_string())
+        ));
+    }
+
+    #[test]
+    fn should_fallback_truth_table() {
+        let eligible = unavailable_error();
+        let ineligible = ClientLibError::FileRevoked {
+            timestamp: "t".to_string(),
+            initiator: "i".to_string(),
+        };
+        // All three conditions must hold.
+        assert!(should_fallback(&eligible, true, true));
+        // Flag off.
+        assert!(!should_fallback(&eligible, false, true));
+        // Not a GitHub release URL.
+        assert!(!should_fallback(&eligible, true, false));
+        // Eligible flag + URL but a verification failure.
+        assert!(!should_fallback(&ineligible, true, true));
+    }
 }
