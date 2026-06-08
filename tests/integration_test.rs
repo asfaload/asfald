@@ -262,3 +262,53 @@ async fn test_get_digest() {
         }
     }
 }
+
+// Backend that refuses connections, so client-lib fails with a
+// "protection unavailable" error (Network / ArtifactInfoFetchError).
+const UNREACHABLE_BACKEND: &str = "http://127.0.0.1:1";
+
+#[tokio::test]
+async fn test_download_falls_back_to_github_when_flag_set() {
+    let mock_info = setup_mocks().await;
+    let tmp = tempfile::TempDir::new().unwrap();
+    let out = tmp.path().join("out.bin");
+
+    let res = mock_info
+        .downloader
+        .download(
+            mock_info.url.clone(),
+            Some(out.as_path()),
+            UNREACHABLE_BACKEND,
+            None, // auto-detect forge (unused: fallback path taken)
+            true, // github_fallback
+            true, // quiet
+        )
+        .await;
+
+    assert!(res.is_ok(), "expected fallback to succeed, got {res:?}");
+    assert!(out.exists(), "fallback should have written the file");
+}
+
+#[tokio::test]
+async fn test_no_fallback_when_flag_absent() {
+    // No GitHub mock needed: with the flag off, the GitHub path is never taken.
+    let downloader = Downloader::new();
+    let url = Url::parse("https://github.com/test/repo/releases/download/v1.0.0/test-file.tar.gz")
+        .unwrap();
+    let tmp = tempfile::TempDir::new().unwrap();
+    let out = tmp.path().join("out.bin");
+
+    let res = downloader
+        .download(
+            url,
+            Some(out.as_path()),
+            UNREACHABLE_BACKEND,
+            None,
+            false, // github_fallback OFF
+            true,
+        )
+        .await;
+
+    assert!(res.is_err(), "expected an error without fallback");
+    assert!(!out.exists(), "nothing should have been written");
+}
